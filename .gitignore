@@ -1,0 +1,18 @@
+# Maven build output
+target/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code — keep shared config (.claude/settings.json, CLAUDE.md),
+# ignore personal/local overrides
+.claude/settings.local.json
