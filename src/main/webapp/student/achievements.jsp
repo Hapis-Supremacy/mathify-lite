@@ -25,7 +25,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=3" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=4" data-username="${sessionScope.userName}"></script>
 <script>
   var achievements = [
     { title:'First Steps',     req:'Complete your first lesson', icon:'bi-flag-fill',          unlocked:true },

@@ -115,3 +115,27 @@ database/mathify_schema.sql    — MySQL schema
 - `target/` is build output — never edit files there; edit `src/`.
 - **DB config:** never commit real credentials to `src/main/resources/db.properties`
   — see README.md's "Configure the connection" step for local defaults.
+
+## Database and schema gotchas
+
+DAO queries assume columns that were not always present in `database/mathify_schema.sql`.
+A missing column surfaces as a `?error=server_error` redirect on login or register: the DAO throws `SQLSyntaxErrorException` and the servlet catches it.
+A known case is `users.is_disabled BOOLEAN NOT NULL DEFAULT FALSE`, used by the admin "disable student" feature.
+When you add a column in a DAO, add it to `database/mathify_schema.sql` and a `database/migration_*.sql` as well.
+XAMPP ships its own Tomcat on port 8080; if `cargo:run` reports "Port 8080 in use", stop XAMPP's Tomcat (only MySQL is needed from XAMPP).
+
+## Payments (Midtrans)
+
+The "Go Premium" upgrade uses the Midtrans Snap flow, sandbox by default.
+Credentials come from a gitignored `.env` at the project root, read by `com.mathify.util.MidtransConfig` (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_MERCHANT_ID`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_PREMIUM_PRICE`); OS env vars override the file.
+Never hard-code keys; see `.env.example`.
+The server is the source of truth: `PremiumCheckoutServlet` (`/student/premium/checkout.do`) creates the Snap token with a server-side fixed amount, and `PremiumConfirmServlet` (`/student/premium/confirm.do`) re-verifies the transaction status with Midtrans before granting premium.
+Never trust the browser's success callback or a client-supplied amount.
+The HTTP calls live in `com.mathify.service.MidtransService` (Basic auth = `Base64(serverKey + ":")`).
+There are two plans, selected via the `plan` request parameter: monthly (Rp 125.500, 30 days) and yearly (Rp 1.224.500, 365 days).
+No webhook is needed on localhost: activation happens in `confirm.do` via a status check; for production, also configure a Midtrans notification URL.
+Premium is persisted by `com.mathify.dao.SubscriptionDAO` into the `subscriptions` table; tracking columns `midtrans_order_id` and `payment_status` were added (see `database/migration_add_payment_tracking.sql`).
+Admins can manually grant or revoke premium from the Students page via the `grant_premium` and `revoke_premium` actions, as an override.
+The navbar premium badge, energy, and XP come from `GET /student/profile.do` (`StudentProfileServlet`), fetched by `app.js`; JSON is built and parsed with `org.json` (in `pom.xml`).
+For testing, the quickest path is card `4811 1111 1111 1114`, CVV `123`, OTP `112233`.
+Sandbox QRIS QR codes cannot be scanned by real apps; use the Midtrans simulator at `https://simulator.sandbox.midtrans.com/`.

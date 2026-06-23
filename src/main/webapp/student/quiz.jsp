@@ -54,7 +54,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=3" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=4" data-username="${sessionScope.userName}"></script>
 <script>
   // Lightweight single-select interaction for the demo question.
   var opts = document.querySelectorAll('#options .quiz-option');
