@@ -53,7 +53,7 @@
           </c:choose>
         </td>
         <td class="text-end pe-4">
-          <form action="${pageContext.request.contextPath}/admin/student-action.do" method="post" class="d-inline-flex gap-1 mb-0">
+          <form id="student-form-${student.studentId}" action="${pageContext.request.contextPath}/admin/student-action.do" method="post" class="d-inline-flex gap-1 mb-0">
             <input type="hidden" name="studentId" value="${student.studentId}"/>
             <c:choose>
               <c:when test="${student.plan == 'Premium'}">
@@ -65,13 +65,17 @@
             </c:choose>
             <c:choose>
               <c:when test="${student.status == 'Active'}">
-                <button type="submit" name="action" value="disable" class="btn btn-sm btn-outline-secondary">Disable</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-action"
+                        data-form-id="student-form-${student.studentId}" data-variant="disable"
+                        data-student-name="<c:out value="${student.name}"/>">Disable</button>
               </c:when>
               <c:otherwise>
                 <button type="submit" name="action" value="enable" class="btn btn-sm btn-outline-secondary">Enable</button>
               </c:otherwise>
             </c:choose>
-            <button type="submit" name="action" value="delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this student?');"><i class="bi bi-trash"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger js-confirm-action"
+                    data-form-id="student-form-${student.studentId}" data-variant="delete"
+                    data-student-name="<c:out value="${student.name}"/>" aria-label="Delete student"><i class="bi bi-trash"></i></button>
           </form>
         </td>
       </tr>
@@ -81,7 +85,96 @@
 
 </div>
 
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmActionTitle">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title d-flex align-items-center gap-2" id="confirmActionTitle">
+          <span class="js-confirm-icon d-inline-flex align-items-center justify-content-center rounded-circle"
+                style="width:2.25rem;height:2.25rem;"><i class="bi"></i></span>
+          <span class="js-confirm-heading"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2 text-secondary js-confirm-message"></div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn js-confirm-ok"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function () {
+    var modalEl = document.getElementById('confirmActionModal');
+    if (!modalEl) return;
+    var modal = new bootstrap.Modal(modalEl);
+    var iconWrap = modalEl.querySelector('.js-confirm-icon');
+    var iconEl = iconWrap.querySelector('i');
+    var headingEl = modalEl.querySelector('.js-confirm-heading');
+    var messageEl = modalEl.querySelector('.js-confirm-message');
+    var okBtn = modalEl.querySelector('.js-confirm-ok');
+
+    var variants = {
+      disable: {
+        heading: 'Disable account',
+        icon: 'bi-pause-circle',
+        iconWrap: 'bg-warning-subtle text-warning-emphasis',
+        okClass: 'btn-warning',
+        okLabel: 'Disable account',
+        message: function (name) {
+          return 'Disable ' + name + "'s account? They will not be able to sign in until you re-enable it.";
+        }
+      },
+      delete: {
+        heading: 'Delete account',
+        icon: 'bi-trash',
+        iconWrap: 'bg-danger-subtle text-danger-emphasis',
+        okClass: 'btn-danger',
+        okLabel: 'Delete account',
+        message: function (name) {
+          return 'Permanently delete ' + name + "'s account? This removes all of their progress and cannot be undone.";
+        }
+      }
+    };
+
+    var pending = null;
+
+    document.querySelectorAll('.js-confirm-action').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cfg = variants[btn.dataset.variant];
+        if (!cfg) return;
+        var name = btn.dataset.studentName || 'this student';
+        pending = { formId: btn.dataset.formId, variant: btn.dataset.variant };
+
+        headingEl.textContent = cfg.heading;
+        messageEl.textContent = cfg.message(name);
+        iconEl.className = 'bi ' + cfg.icon;
+        iconWrap.className = 'js-confirm-icon d-inline-flex align-items-center justify-content-center rounded-circle ' + cfg.iconWrap;
+        okBtn.className = 'btn js-confirm-ok ' + cfg.okClass;
+        okBtn.textContent = cfg.okLabel;
+        modal.show();
+      });
+    });
+
+    okBtn.addEventListener('click', function () {
+      if (!pending) return;
+      var form = document.getElementById(pending.formId);
+      if (form) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'action';
+        input.value = pending.variant;
+        form.appendChild(input);
+        form.submit();
+      }
+      pending = null;
+      modal.hide();
+    });
+  })();
+</script>
 <script src="../assets/js/app.js?v=4" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

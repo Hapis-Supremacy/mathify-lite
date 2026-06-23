@@ -2,7 +2,7 @@
 
 How Mathify Lite is put together. For setup/run instructions see
 [README.md](README.md); for repository conventions and gotchas see
-[CLAUDE.md](CLAUDE.md) / [AGENTS.md](.agents/AGENTS.md).
+[AGENTS.md](.agents/AGENTS.md) (`CLAUDE.md` just imports it for Claude Code).
 
 ## Stack
 
@@ -22,7 +22,7 @@ Browser → Tomcat → [Filter] → Servlet (*.do) → DAO → DBUtil → MySQL
   at `/login`, `RegisterServlet` at `/register`) or via `@WebServlet`
   annotations (everything under `/student/*.do` and `/admin/*.do`). The two
   mechanisms are never combined for the same servlet — see the "Avoid
-  Duplicate Mappings" gotcha in CLAUDE.md.
+  Duplicate Mappings" gotcha in AGENTS.md.
 - **Filters** (`@WebFilter`) gate the `/student/*` and `/admin/*` paths:
   `StudentAuthFilter` and `AdminAuthFilter` check the session first, then
   fall back to the persistent auth cookie, then redirect to login if neither
@@ -84,10 +84,3 @@ subtype), plus progress/reporting types (`UserProgress`,
 `ChapterProgress`, `QuizAttempt`, `Achievement`, `ReportMetric`,
 `Notification`). The original UML class diagram this was modeled from is
 [`CLASS_DIAGRAM.json`](CLASS_DIAGRAM.json) (see [DESIGN.md](DESIGN.md)).
-
-## Build & deploy
-
-`mvn package cargo:run` builds the WAR (`target/mathify-lite.war`) and
-deploys it to an embedded Tomcat 10.1 at the server root (`/`), so the app
-is reachable at `http://localhost:8080/` rather than under a context path.
-Cargo downloads Tomcat into `target/` on first run.
