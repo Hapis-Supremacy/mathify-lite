@@ -57,6 +57,11 @@
     var role = body.dataset.role || "student";
     var page = body.dataset.page || "";
     var base = body.dataset.base || "";          // path to webapp root
+
+    // Idempotent: drop any previously injected navbar so render() can re-run
+    // once live profile data arrives.
+    var existing = document.getElementById("appShellNav");
+    if (existing) { existing.remove(); }
     var isStudent = role === "student";
     var items = NAV[role] || NAV.student;
 
@@ -85,7 +90,7 @@
     var avatarHtml = '<i class="bi bi-person-fill" style="font-size:1.2rem;"></i>';
 
     var nav = el(
-      '<nav class="navbar navbar-expand-md sticky-top px-3" style="background:#fff;border-bottom:1px solid #e2e7ef;z-index:1030;">' +
+      '<nav id="appShellNav" class="navbar navbar-expand-md sticky-top px-3" style="background:#fff;border-bottom:1px solid #e2e7ef;z-index:1030;">' +
         '<div class="container-fluid shell">' +
           '<a class="navbar-brand brandfont fw-bold d-flex align-items-center gap-2 mb-0" style="color:#1d4e89;font-size:1.4rem;" href="' + base + (isStudent ? "student/dashboard.do" : "admin/dashboard.jsp") + '">' +
             '<span class="brand-mark">&Sigma;</span>Mathify' +
@@ -112,10 +117,37 @@
     body.insertBefore(nav, body.firstChild);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
-  } else {
+  // Pull the student's real header data (premium status, energy, streak, XP)
+  // and re-render the navbar with it. Falls back silently to sample values.
+  function hydrateProfile() {
+    var base = document.body.dataset.base || "";
+    fetch(base + "student/profile.do", { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || data.error) { return; }
+        profile.name = data.name || profile.name;
+        profile.premium = !!data.premium;
+        if (typeof data.energy === "number") { profile.energy = data.energy; }
+        if (typeof data.energyMax === "number") { profile.energyMax = data.energyMax; }
+        if (typeof data.streak === "number") { profile.streak = data.streak; }
+        if (typeof data.level === "number") { profile.level = data.level; }
+        if (typeof data.totalXp === "number") { profile.totalXP = data.totalXp; }
+        render();
+      })
+      .catch(function () { /* keep the sample navbar on any failure */ });
+  }
+
+  function start() {
     render();
+    if ((document.body.dataset.role || "student") === "student") {
+      hydrateProfile();
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
   }
 
   // expose for any page that wants the sample profile

@@ -43,7 +43,38 @@ Edit `db.user` / `db.password` to match your local MySQL setup if it differs
 from the defaults. **Do not commit real credentials** — keep this file
 pointed at local/dev values only.
 
-## 3. Build and run
+## 3. Configure payments (Midtrans)
+
+The **Go Premium** page upgrades a student via the Midtrans **Snap** flow.
+Credentials are read from a `.env` file at the project root (gitignored).
+
+1. Copy the template and fill in your keys (Midtrans dashboard → Settings →
+   Access Keys):
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   ```properties
+   MIDTRANS_MERCHANT_ID=your-merchant-id
+   MIDTRANS_CLIENT_KEY=Mid-client-xxxxxxxx
+   MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxx
+   MIDTRANS_IS_PRODUCTION=false      # sandbox; set true for production
+   MIDTRANS_PREMIUM_PRICE=49000      # IDR charged per month
+   ```
+
+2. Add the payment-tracking columns to an existing database (fresh installs
+   from `mathify_schema.sql` already have them):
+
+   ```bash
+   mysql -u root -p mathify_db < database/migration_add_payment_tracking.sql
+   ```
+
+Real OS environment variables of the same name override `.env`. If no server
+key is set, the upgrade button reports that payments are not configured.
+**Never commit real keys.**
+
+## 4. Build and run
 
 ```bash
 mvn package cargo:run

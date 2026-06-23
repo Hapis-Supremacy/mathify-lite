@@ -30,6 +30,7 @@ CREATE TABLE users (
     name          VARCHAR(150) NOT NULL,
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    is_disabled   BOOLEAN      NOT NULL DEFAULT FALSE,
     created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                ON UPDATE CURRENT_TIMESTAMP,
@@ -68,6 +69,8 @@ CREATE TABLE subscriptions (
     subscription_plan    VARCHAR(50)  NOT NULL,
     subscription_expiry DATE         NOT NULL,
     is_canceled          BOOLEAN      NOT NULL DEFAULT FALSE,
+    midtrans_order_id    VARCHAR(100) NULL,
+    payment_status       VARCHAR(30)  NULL,
     created_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                                       ON UPDATE CURRENT_TIMESTAMP,

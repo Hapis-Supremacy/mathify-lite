@@ -44,7 +44,7 @@ jobs:
         mysql -h 127.0.0.1 -u root < database/mathify_schema.sql
         mysql -h 127.0.0.1 -u root < database/insert_admin.sql
         mysql -h 127.0.0.1 -u root < database/insert_course_1.sql
-        mysql -h 127.0.0.1 -u root < database/insert_course_2.sql
+        if [ -f database/insert_course_2.sql ]; then mysql -h 127.0.0.1 -u root < database/insert_course_2.sql; fi
 
     - name: Run Schema Migrations (DBUpdater)
       run: mvn compile exec:java -Dexec.mainClass="com.mathify.db.DBUpdater"
