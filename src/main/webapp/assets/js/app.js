@@ -36,7 +36,7 @@
     student: [
       { key: "dashboard",    label: "Dashboard",    icon: "bi-house-door",      href: "dashboard.do" },
       { key: "catalog",      label: "Courses",      icon: "bi-grid",            href: "catalog.do" },
-      { key: "achievements", label: "Achievements", icon: "bi-trophy",          href: "achievements.jsp" },
+      { key: "achievements", label: "Achievements", icon: "bi-trophy",          href: "achievements.do" },
       { key: "premium",      label: "Premium",      icon: "bi-gem",             href: "premium.jsp" }
     ],
     admin: [

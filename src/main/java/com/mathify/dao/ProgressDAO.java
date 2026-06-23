@@ -53,6 +53,28 @@ public class ProgressDAO {
                     progress.addStreak(rs.getInt("current_streak"));
                 }
             }
+            
+            // Load achievements
+            String sqlAch = "SELECT a.achievement_id, a.title, a.category, a.requirement, a.icon, sa.unlocked_at " +
+                            "FROM student_achievements sa " +
+                            "JOIN achievements a ON sa.achievement_id = a.achievement_id " +
+                            "WHERE sa.student_id = ?";
+            try (PreparedStatement psAch = conn.prepareStatement(sqlAch)) {
+                psAch.setString(1, studentId);
+                try (ResultSet rsAch = psAch.executeQuery()) {
+                    while (rsAch.next()) {
+                        com.mathify.model.Achievement a = new com.mathify.model.Achievement();
+                        a.setId(rsAch.getString("achievement_id"));
+                        a.setTitle(rsAch.getString("title"));
+                        a.setCategory(rsAch.getString("category"));
+                        a.setRequirement(rsAch.getString("requirement"));
+                        a.setIcon(rsAch.getString("icon"));
+                        
+                        java.time.LocalDateTime unlockedAt = rsAch.getTimestamp("unlocked_at").toLocalDateTime();
+                        progress.getAchievements().add(new UserProgress.AchievementUnlock(a, unlockedAt));
+                    }
+                }
+            }
         }
         return progress;
     }
@@ -136,6 +158,7 @@ public class ProgressDAO {
         completeReadyChapters(conn, studentId);
         reconcileMissingEnrollments(conn, studentId);
         reconcileCourseCompletions(conn, studentId);
+        reconcileAchievements(conn, studentId);
     }
 
     private void reconcileMissingEnrollments(Connection conn, String studentId) throws SQLException {
@@ -677,5 +700,98 @@ public class ProgressDAO {
             }
         }
         return 0;
+    }
+
+    public List<com.mathify.model.Achievement> getAllAchievements() throws SQLException {
+        List<com.mathify.model.Achievement> list = new ArrayList<>();
+        String sql = "SELECT achievement_id, title, category, requirement, icon FROM achievements";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                com.mathify.model.Achievement a = new com.mathify.model.Achievement();
+                a.setId(rs.getString("achievement_id"));
+                a.setTitle(rs.getString("title"));
+                a.setCategory(rs.getString("category"));
+                a.setRequirement(rs.getString("requirement"));
+                a.setIcon(rs.getString("icon"));
+                list.add(a);
+            }
+        }
+        return list;
+    }
+
+    private void reconcileAchievements(Connection conn, String studentId) throws SQLException {
+        int currentStreak = getStoredStreak(conn, studentId);
+        int totalXP = getStoredXP(conn, studentId);
+
+        // 1. First Steps: Has completed at least one chapter
+        if (checkQuery(conn, "SELECT 1 FROM chapter_progress WHERE student_id = ? LIMIT 1", studentId)) {
+            unlockAchievement(conn, studentId, "ach-1");
+        }
+        // 2. Quiz Whiz: Passed 5 quizzes
+        if (checkCount(conn, "SELECT COUNT(*) FROM quiz_attempts qa JOIN quizzes q ON qa.quiz_id = q.quiz_id WHERE qa.student_id = ? AND qa.score >= q.passing_score", studentId) >= 5) {
+            unlockAchievement(conn, studentId, "ach-2");
+        }
+        // 3. On Fire: 7-day streak
+        if (currentStreak >= 7) {
+            unlockAchievement(conn, studentId, "ach-3");
+        }
+        // 4. Scholar: 1,000 XP
+        if (totalXP >= 1000) {
+            unlockAchievement(conn, studentId, "ach-4");
+        }
+        // 5. Course Champion: Completed 1 course
+        if (checkQuery(conn, "SELECT 1 FROM course_enrollments WHERE student_id = ? AND completed_at IS NOT NULL LIMIT 1", studentId)) {
+            unlockAchievement(conn, studentId, "ach-5");
+        }
+        // 6. Perfectionist: 100% on a quiz
+        if (checkQuery(conn, "SELECT 1 FROM quiz_attempts WHERE student_id = ? AND score = 100 LIMIT 1", studentId)) {
+            unlockAchievement(conn, studentId, "ach-6");
+        }
+        // 7. Marathoner: 30-day streak
+        if (currentStreak >= 30) {
+            unlockAchievement(conn, studentId, "ach-7");
+        }
+        // 8. Polymath: Enroll in 3 categories
+        if (checkCount(conn, "SELECT COUNT(DISTINCT c.category) FROM course_enrollments ce JOIN courses c ON ce.course_id = c.course_id WHERE ce.student_id = ?", studentId) >= 3) {
+            unlockAchievement(conn, studentId, "ach-8");
+        }
+    }
+
+    private boolean checkQuery(Connection conn, String sql, String studentId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private int checkCount(Connection conn, String sql, String studentId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+
+    private void unlockAchievement(Connection conn, String studentId, String achievementId) throws SQLException {
+        String sql = "INSERT INTO student_achievements (student_id, achievement_id, unlocked_at) " +
+                     "VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE unlocked_at = unlocked_at";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, achievementId);
+            int affected = ps.executeUpdate();
+            if (affected == 1) { 
+                 // Insert notification
+                 try (PreparedStatement psNotif = conn.prepareStatement("INSERT INTO notifications (user_id, type, sent_at, is_read) VALUES (?, 'ACHIEVEMENT_UNLOCKED', NOW(), FALSE)")) {
+                      psNotif.setString(1, studentId);
+                      psNotif.executeUpdate();
+                 }
+            }
+        }
     }
 }
