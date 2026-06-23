@@ -555,34 +555,11 @@ public class CourseDAO {
     }
 
     public void createMultipleChoiceQuestion(String quizId, String prompt, int points, int orderIndex, List<MultipleChoiceQuestion.Option> options, java.util.Set<String> correctText) throws SQLException {
-        String qId = UUID.randomUUID().toString();
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                String sqlQ = "INSERT INTO questions (question_id, quiz_id, prompt, points, question_type, order_index) VALUES (?, ?, ?, ?, 'MULTIPLE_CHOICE', ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlQ)) {
-                    stmt.setString(1, qId);
-                    stmt.setString(2, quizId);
-                    stmt.setString(3, prompt);
-                    stmt.setInt(4, points);
-                    stmt.setInt(5, orderIndex);
-                    stmt.executeUpdate();
-                }
-                
-                String sqlOpt = "INSERT INTO multiple_choice_options (option_id, question_id, option_text, is_correct, order_index) VALUES (?, ?, ?, ?, ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlOpt)) {
-                    int idx = 0;
-                    for (MultipleChoiceQuestion.Option opt : options) {
-                        String optId = UUID.randomUUID().toString();
-                        stmt.setString(1, optId);
-                        stmt.setString(2, qId);
-                        stmt.setString(3, opt.text());
-                        stmt.setBoolean(4, correctText.contains(opt.text()));
-                        stmt.setInt(5, idx++);
-                        stmt.addBatch();
-                    }
-                    stmt.executeBatch();
-                }
+                String qId = insertQuestionRow(conn, quizId, prompt, points, "MULTIPLE_CHOICE", orderIndex);
+                insertMultipleChoiceOptions(conn, qId, options, correctText);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -594,37 +571,11 @@ public class CourseDAO {
     }
 
     public void createFillBlankQuestion(String quizId, String prompt, int points, int orderIndex, boolean caseSensitive, List<String> answers) throws SQLException {
-        String qId = UUID.randomUUID().toString();
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                String sqlQ = "INSERT INTO questions (question_id, quiz_id, prompt, points, question_type, order_index) VALUES (?, ?, ?, ?, 'FILL_BLANK', ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlQ)) {
-                    stmt.setString(1, qId);
-                    stmt.setString(2, quizId);
-                    stmt.setString(3, prompt);
-                    stmt.setInt(4, points);
-                    stmt.setInt(5, orderIndex);
-                    stmt.executeUpdate();
-                }
-                
-                String sqlFb = "INSERT INTO fill_blank_questions (question_id, case_sensitive) VALUES (?, ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlFb)) {
-                    stmt.setString(1, qId);
-                    stmt.setBoolean(2, caseSensitive);
-                    stmt.executeUpdate();
-                }
-                
-                String sqlAns = "INSERT INTO fill_blank_answers (answer_id, question_id, answer_text) VALUES (?, ?, ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlAns)) {
-                    for (String ans : answers) {
-                        stmt.setString(1, UUID.randomUUID().toString());
-                        stmt.setString(2, qId);
-                        stmt.setString(3, ans);
-                        stmt.addBatch();
-                    }
-                    stmt.executeBatch();
-                }
+                String qId = insertQuestionRow(conn, quizId, prompt, points, "FILL_BLANK", orderIndex);
+                insertFillBlankDetails(conn, qId, caseSensitive, answers);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -636,51 +587,11 @@ public class CourseDAO {
     }
 
     public void createDragDropQuestion(String quizId, String prompt, int points, int orderIndex, java.util.Map<String, String> pairings) throws SQLException {
-        String qId = UUID.randomUUID().toString();
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                String sqlQ = "INSERT INTO questions (question_id, quiz_id, prompt, points, question_type, order_index) VALUES (?, ?, ?, ?, 'DRAG_AND_DROP', ?)";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlQ)) {
-                    stmt.setString(1, qId);
-                    stmt.setString(2, quizId);
-                    stmt.setString(3, prompt);
-                    stmt.setInt(4, points);
-                    stmt.setInt(5, orderIndex);
-                    stmt.executeUpdate();
-                }
-                
-                String sqlDrag = "INSERT INTO drag_items (drag_item_id, question_id, label) VALUES (?, ?, ?)";
-                String sqlDrop = "INSERT INTO drop_zones (drop_zone_id, question_id, label) VALUES (?, ?, ?)";
-                String sqlPair = "INSERT INTO drag_drop_pairings (question_id, drag_item_id, drop_zone_id) VALUES (?, ?, ?)";
-                
-                try (PreparedStatement stmtDrag = conn.prepareStatement(sqlDrag);
-                     PreparedStatement stmtDrop = conn.prepareStatement(sqlDrop);
-                     PreparedStatement stmtPair = conn.prepareStatement(sqlPair)) {
-                     
-                    for (java.util.Map.Entry<String, String> entry : pairings.entrySet()) {
-                        String dragId = UUID.randomUUID().toString();
-                        String dropId = UUID.randomUUID().toString();
-                        
-                        stmtDrag.setString(1, dragId);
-                        stmtDrag.setString(2, qId);
-                        stmtDrag.setString(3, entry.getKey());
-                        stmtDrag.addBatch();
-                        
-                        stmtDrop.setString(1, dropId);
-                        stmtDrop.setString(2, qId);
-                        stmtDrop.setString(3, entry.getValue());
-                        stmtDrop.addBatch();
-                        
-                        stmtPair.setString(1, qId);
-                        stmtPair.setString(2, dragId);
-                        stmtPair.setString(3, dropId);
-                        stmtPair.addBatch();
-                    }
-                    stmtDrag.executeBatch();
-                    stmtDrop.executeBatch();
-                    stmtPair.executeBatch();
-                }
+                String qId = insertQuestionRow(conn, quizId, prompt, points, "DRAG_AND_DROP", orderIndex);
+                insertDragDropDetails(conn, qId, pairings);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -688,6 +599,176 @@ public class CourseDAO {
             } finally {
                 conn.setAutoCommit(true);
             }
+        }
+    }
+
+    // ---- Question editing -----------------------------------------------
+    // Each update keeps the existing question_id but rewrites its content. The
+    // base row (incl. question_type) is updated and ALL subtype rows are wiped
+    // first, so an admin can also switch a question from one type to another.
+
+    public void updateMultipleChoiceQuestion(String questionId, String prompt, int points, int orderIndex, List<MultipleChoiceQuestion.Option> options, java.util.Set<String> correctText) throws SQLException {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                updateQuestionRow(conn, questionId, prompt, points, "MULTIPLE_CHOICE", orderIndex);
+                clearQuestionSubtypeData(conn, questionId);
+                insertMultipleChoiceOptions(conn, questionId, options, correctText);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    public void updateFillBlankQuestion(String questionId, String prompt, int points, int orderIndex, boolean caseSensitive, List<String> answers) throws SQLException {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                updateQuestionRow(conn, questionId, prompt, points, "FILL_BLANK", orderIndex);
+                clearQuestionSubtypeData(conn, questionId);
+                insertFillBlankDetails(conn, questionId, caseSensitive, answers);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    public void updateDragDropQuestion(String questionId, String prompt, int points, int orderIndex, java.util.Map<String, String> pairings) throws SQLException {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                updateQuestionRow(conn, questionId, prompt, points, "DRAG_AND_DROP", orderIndex);
+                clearQuestionSubtypeData(conn, questionId);
+                insertDragDropDetails(conn, questionId, pairings);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    // ---- Question persistence helpers (shared by create + update) -------
+
+    private String insertQuestionRow(Connection conn, String quizId, String prompt, int points, String type, int orderIndex) throws SQLException {
+        String qId = UUID.randomUUID().toString();
+        String sql = "INSERT INTO questions (question_id, quiz_id, prompt, points, question_type, order_index) VALUES (?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, qId);
+            stmt.setString(2, quizId);
+            stmt.setString(3, prompt);
+            stmt.setInt(4, points);
+            stmt.setString(5, type);
+            stmt.setInt(6, orderIndex);
+            stmt.executeUpdate();
+        }
+        return qId;
+    }
+
+    private void updateQuestionRow(Connection conn, String questionId, String prompt, int points, String type, int orderIndex) throws SQLException {
+        String sql = "UPDATE questions SET prompt = ?, points = ?, question_type = ?, order_index = ? WHERE question_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, prompt);
+            stmt.setInt(2, points);
+            stmt.setString(3, type);
+            stmt.setInt(4, orderIndex);
+            stmt.setString(5, questionId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Removes every subtype row for a question across all three types (pairings before items/zones). */
+    private void clearQuestionSubtypeData(Connection conn, String questionId) throws SQLException {
+        String[] deletes = {
+            "DELETE FROM drag_drop_pairings WHERE question_id = ?",
+            "DELETE FROM drag_items WHERE question_id = ?",
+            "DELETE FROM drop_zones WHERE question_id = ?",
+            "DELETE FROM fill_blank_answers WHERE question_id = ?",
+            "DELETE FROM fill_blank_questions WHERE question_id = ?",
+            "DELETE FROM multiple_choice_options WHERE question_id = ?"
+        };
+        for (String sql : deletes) {
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, questionId);
+                stmt.executeUpdate();
+            }
+        }
+    }
+
+    private void insertMultipleChoiceOptions(Connection conn, String questionId, List<MultipleChoiceQuestion.Option> options, java.util.Set<String> correctText) throws SQLException {
+        String sql = "INSERT INTO multiple_choice_options (option_id, question_id, option_text, is_correct, order_index) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int idx = 0;
+            for (MultipleChoiceQuestion.Option opt : options) {
+                stmt.setString(1, UUID.randomUUID().toString());
+                stmt.setString(2, questionId);
+                stmt.setString(3, opt.text());
+                stmt.setBoolean(4, correctText.contains(opt.text()));
+                stmt.setInt(5, idx++);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        }
+    }
+
+    private void insertFillBlankDetails(Connection conn, String questionId, boolean caseSensitive, List<String> answers) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO fill_blank_questions (question_id, case_sensitive) VALUES (?, ?)")) {
+            stmt.setString(1, questionId);
+            stmt.setBoolean(2, caseSensitive);
+            stmt.executeUpdate();
+        }
+        try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO fill_blank_answers (answer_id, question_id, answer_text) VALUES (?, ?, ?)")) {
+            for (String ans : answers) {
+                stmt.setString(1, UUID.randomUUID().toString());
+                stmt.setString(2, questionId);
+                stmt.setString(3, ans);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+        }
+    }
+
+    private void insertDragDropDetails(Connection conn, String questionId, java.util.Map<String, String> pairings) throws SQLException {
+        String sqlDrag = "INSERT INTO drag_items (drag_item_id, question_id, label) VALUES (?, ?, ?)";
+        String sqlDrop = "INSERT INTO drop_zones (drop_zone_id, question_id, label) VALUES (?, ?, ?)";
+        String sqlPair = "INSERT INTO drag_drop_pairings (question_id, drag_item_id, drop_zone_id) VALUES (?, ?, ?)";
+
+        try (PreparedStatement stmtDrag = conn.prepareStatement(sqlDrag);
+             PreparedStatement stmtDrop = conn.prepareStatement(sqlDrop);
+             PreparedStatement stmtPair = conn.prepareStatement(sqlPair)) {
+
+            for (java.util.Map.Entry<String, String> entry : pairings.entrySet()) {
+                String dragId = UUID.randomUUID().toString();
+                String dropId = UUID.randomUUID().toString();
+
+                stmtDrag.setString(1, dragId);
+                stmtDrag.setString(2, questionId);
+                stmtDrag.setString(3, entry.getKey());
+                stmtDrag.addBatch();
+
+                stmtDrop.setString(1, dropId);
+                stmtDrop.setString(2, questionId);
+                stmtDrop.setString(3, entry.getValue());
+                stmtDrop.addBatch();
+
+                stmtPair.setString(1, questionId);
+                stmtPair.setString(2, dragId);
+                stmtPair.setString(3, dropId);
+                stmtPair.addBatch();
+            }
+            stmtDrag.executeBatch();
+            stmtDrop.executeBatch();
+            stmtPair.executeBatch();
         }
     }
 

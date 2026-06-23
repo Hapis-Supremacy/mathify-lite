@@ -27,6 +27,8 @@
   Student globalStudent = (Student) request.getAttribute("globalStudent");
   Boolean courseCompletedAttr = (Boolean) request.getAttribute("courseCompleted");
   boolean courseCompleted = Boolean.TRUE.equals(courseCompletedAttr);
+  Boolean enrolledAttr = (Boolean) request.getAttribute("enrolled");
+  boolean enrolled = Boolean.TRUE.equals(enrolledAttr);
   boolean quizEnergyLocked = globalStudent != null && !globalStudent.isPremiumActive() && globalStudent.getEnergy() <= 0;
 %>
 <!DOCTYPE html>
@@ -60,6 +62,7 @@
         <p class="text-secondary mb-0"><%= course.getDescription() != null ? course.getDescription() : "" %></p>
       </div>
       <div class="text-end">
+        <% if (enrolled) { %>
         <div class="mb-2">
           <% if (courseCompleted) { %>
           <span class="badge rounded-pill bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
@@ -67,7 +70,18 @@
           <span class="badge rounded-pill badge-success-soft"><i class="bi bi-check2 me-1"></i>Enrolled</span>
           <% } %>
         </div>
-        <button class="btn btn-outline-secondary btn-sm">Unenroll</button>
+        <form method="post" action="enroll.do" class="m-0">
+          <input type="hidden" name="action" value="unenroll">
+          <input type="hidden" name="courseId" value="<%= course.getCourseId() %>">
+          <button type="submit" class="btn btn-outline-secondary btn-sm">Unenroll</button>
+        </form>
+        <% } else { %>
+        <form method="post" action="enroll.do" class="m-0">
+          <input type="hidden" name="action" value="enroll">
+          <input type="hidden" name="courseId" value="<%= course.getCourseId() %>">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Enroll</button>
+        </form>
+        <% } %>
       </div>
     </div>
   </div></div>

@@ -49,6 +49,10 @@ public final class FillBlankQuestion implements Question {
         return caseSensitive;
     }
 
+    public List<String> getCorrectAnswers() {
+        return correctAnswers;
+    }
+
     public int getBlankCount() {
         return correctAnswers.size();
     }

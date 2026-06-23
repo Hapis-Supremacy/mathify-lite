@@ -29,7 +29,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ---------------------------------------------------------------
 
 INSERT INTO courses (course_id, title, description, category) VALUES
-('4c528cbb-52bc-4ef2-8448-f43233d1770a', 'A Vision of Linear Algebra', 'A Vision of Linear Algebra -- College/undergraduate-level Linear Algebra, typically taken after Calculus (year 1-2 of a STEM degree). Fits as CORE content for an undergraduate-focused app. [Source: MIT OpenCourseWare, RES.18-010 A Vision of Linear Algebra, Prof. Gilbert Strang. Spring 2020. License: CC BY-NC-SA. https://ocw.mit.edu]', 'Linear Algebra');
+('4c528cbb-52bc-4ef2-8448-f43233d1770a', 'A Vision of Linear Algebra', 'College/undergraduate-level Linear Algebra, typically taken after Calculus. [Source: MIT OpenCourseWare, RES.18-010 A Vision of Linear Algebra, Prof. Gilbert Strang. Spring 2020. License: CC BY-NC-SA. https://ocw.mit.edu]', 'Linear Algebra');
 
 
 -- ---------------------------------------------------------------

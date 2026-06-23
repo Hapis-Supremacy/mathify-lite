@@ -38,9 +38,6 @@ public class QuizServlet extends HttpServlet {
                 String studentId = (String) session.getAttribute("userId");
                 if (studentId != null) {
                     String courseId = courseDAO.getCourseIdForChapter(quiz.getChapterId());
-                    if (courseId != null) {
-                        progressDAO.enrollCourse(studentId, courseId);
-                    }
                     Student student = userDAO.getStudentById(studentId);
                     if (student != null && !student.isPremiumActive() && student.getEnergy() <= 0) {
                         clearQuizSession(session);

@@ -32,6 +32,76 @@ public class ProgressDAO {
         }
     }
 
+    public boolean isEnrolled(String studentId, String courseId) throws SQLException {
+        String sql = "SELECT 1 FROM course_enrollments WHERE student_id = ? AND course_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, courseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /** Course ids the student is currently enrolled in, for rendering catalog state. */
+    public Set<String> getEnrolledCourseIds(String studentId) throws SQLException {
+        Set<String> ids = new HashSet<>();
+        String sql = "SELECT course_id FROM course_enrollments WHERE student_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getString(1));
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Drops a student's enrollment in a course. Enrollment is also reconciled
+     * from activity (see {@link #reconcileMissingEnrollments}), so the student's
+     * chapter progress and quiz attempts for this course are deleted in the same
+     * transaction - otherwise the next page load would silently re-enroll them.
+     * XP earned from that work is reclaimed by the XP reconcile, which recomputes
+     * total_xp from the surviving rows.
+     */
+    public void unenrollCourse(String studentId, String courseId) throws SQLException {
+        String deleteQuizAttempts =
+            "DELETE qa FROM quiz_attempts qa " +
+            "JOIN quizzes q ON qa.quiz_id = q.quiz_id " +
+            "JOIN chapters ch ON q.chapter_id = ch.chapter_id " +
+            "WHERE qa.student_id = ? AND ch.course_id = ?";
+        String deleteChapterProgress =
+            "DELETE cp FROM chapter_progress cp " +
+            "JOIN chapters ch ON cp.chapter_id = ch.chapter_id " +
+            "WHERE cp.student_id = ? AND ch.course_id = ?";
+        String deleteEnrollment =
+            "DELETE FROM course_enrollments WHERE student_id = ? AND course_id = ?";
+
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                for (String sql : new String[]{deleteQuizAttempts, deleteChapterProgress, deleteEnrollment}) {
+                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setString(1, studentId);
+                        ps.setString(2, courseId);
+                        ps.executeUpdate();
+                    }
+                }
+                reconcileUserXP(conn, studentId);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
     /**
      * Loads the high-level progress (xp, level, streak) for a student.
      */

@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.Set" %>
 <%@ page import="com.mathify.model.Course" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,26 +28,44 @@
   </div>
 
   <div class="row g-3">
-    <% 
+    <%
       List<Course> courses = (List<Course>) request.getAttribute("courses");
+      Set<String> enrolledCourseIds = (Set<String>) request.getAttribute("enrolledCourseIds");
       if (courses != null && !courses.isEmpty()) {
-        for (Course c : courses) { 
+        for (Course c : courses) {
+          boolean enrolled = enrolledCourseIds != null && enrolledCourseIds.contains(c.getCourseId());
     %>
     <div class="col-12 col-md-6 col-lg-4">
       <div class="card shadow-sm border-0 h-100"><div class="card-body p-4 d-flex flex-column">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <span class="badge rounded-pill badge-soft"><%= c.getCategory() %></span>
+          <% if (enrolled) { %>
+          <span class="badge rounded-pill badge-success-soft"><i class="bi bi-check2 me-1"></i>Enrolled</span>
+          <% } %>
         </div>
         <h5 class="mb-2"><a class="text-reset" href="course.do?id=<%= c.getCourseId() %>"><%= c.getTitle() %></a></h5>
         <p class="text-secondary small flex-grow-1"><%= c.getDescription() != null ? c.getDescription() : "" %></p>
+        <% if (enrolled) { %>
         <div class="d-flex gap-2">
-          <a class="btn btn-primary btn-sm flex-grow-1" href="course.do?id=<%= c.getCourseId() %>">View Course</a>
+          <a class="btn btn-primary btn-sm flex-grow-1" href="course.do?id=<%= c.getCourseId() %>"><i class="bi bi-play-fill me-1"></i>Continue</a>
+          <form method="post" action="enroll.do" class="m-0">
+            <input type="hidden" name="action" value="unenroll">
+            <input type="hidden" name="courseId" value="<%= c.getCourseId() %>">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Unenroll</button>
+          </form>
         </div>
+        <% } else { %>
+        <form method="post" action="enroll.do" class="d-flex">
+          <input type="hidden" name="action" value="enroll">
+          <input type="hidden" name="courseId" value="<%= c.getCourseId() %>">
+          <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-plus-lg me-1"></i>Enroll</button>
+        </form>
+        <% } %>
       </div></div>
     </div>
-    <% 
+    <%
         }
-      } else { 
+      } else {
     %>
         <div class="col-12">
             <p class="text-secondary">No courses available at the moment.</p>
