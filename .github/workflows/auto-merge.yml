@@ -1,5 +1,11 @@
 name: Auto-merge
 
+# Enables GitHub auto-merge on PRs. This does NOT bypass review or checks:
+# the merge only happens once all REQUIRED status checks pass. For that gate to
+# exist, branch protection on `main` must require the `build` check from
+# maven.yml (configure in repo Settings > Branches). Without required checks,
+# auto-merge would merge as soon as the PR is mergeable - see README.md.
+
 on:
   pull_request:
     types:
@@ -10,14 +16,19 @@ on:
       - labeled
       - unlabeled
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   automerge:
     name: Enable Auto-Merge
     runs-on: ubuntu-latest
+    # Don't enable auto-merge on drafts; wait until the PR is ready for review.
+    if: github.event.pull_request.draft == false
     steps:
       - name: Enable GitHub Auto-Merge
-        uses: peter-evans/enable-pull-request-automerge@v3
+        uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3
         with:
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: merge
-          # Removing the require-label input or setting it empty means it applies to all PRs

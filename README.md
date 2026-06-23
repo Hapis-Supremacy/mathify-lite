@@ -95,6 +95,29 @@ mvn compile   # compile Java only
 mvn package   # build target/mathify-lite.war without running it
 ```
 
+## Continuous integration
+
+GitHub Actions runs three workflows:
+
+- `maven.yml` (`build`) - spins up a MySQL service, loads the schema and
+  migrations, runs a DB smoke check, then `mvn clean package` (which runs the
+  JUnit unit tests and builds the WAR). This is the canonical build.
+- `pr-checks.yml` - lints the PR title (Conventional Commits) and runs the
+  project-preferences linter (`tools/verify-preferences.py`).
+- `auto-merge.yml` - enables GitHub auto-merge on non-draft PRs.
+
+### Required: branch protection for safe auto-merge
+
+Auto-merge only merges once all **required** status checks pass, so this must be
+configured once in the repo (Settings > Branches > add a rule for `main`):
+
+- Require status checks to pass before merging, and select the **`build`** check
+  from `maven.yml`.
+- Enable "Allow auto-merge" in Settings > General.
+
+Without a required check, auto-merge would merge a PR the moment it is mergeable,
+even if the build is red or still running.
+
 ## Project layout
 
 ```

@@ -67,6 +67,26 @@
 
     <plugins>
       <!--
+        Run the JUnit test suite during `mvn test` / `mvn package`. The war
+        packaging does not bind a recent surefire by default, so pin it here.
+        Picks up classes matching *Test.java under src/test/java.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <!--
+            CheckDB is a main() DB smoke-check run via exec:java in CI, not a
+            unit test. Exclude it so `mvn test` stays DB-free and green.
+          -->
+          <excludes>
+            <exclude>**/CheckDB.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <!--
         Run the app with an embedded Tomcat 10.1 (Jakarta Servlet 6.0 compatible):
             mvn package cargo:run
         Then open http://localhost:8080/mathify-lite/
