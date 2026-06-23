@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathify — shared shell (navbar + profile header)
+   Mathify - shared shell (navbar + profile header)
    Injects the top navigation into every page.
 
    Each page declares its context on <body>:
@@ -17,7 +17,7 @@
     dynamicUserName = "User";
   }
 
-  // Sample profile — mirrors the prototype's initial state or dynamic values.
+  // Sample profile - mirrors the prototype's initial state or dynamic values.
   var profile = {
     name: dynamicUserName,
     level: document.body.dataset.level ? parseInt(document.body.dataset.level, 10) : 0,
@@ -41,7 +41,7 @@
     ],
     admin: [
       { key: "overview", label: "Overview", icon: "bi-graph-up-arrow", href: "dashboard.do" },
-      { key: "courses", label: "Courses", icon: "bi-mortarboard", href: "courses.jsp" },
+      { key: "courses", label: "Courses", icon: "bi-mortarboard", href: "courses.do" },
       { key: "students", label: "Students", icon: "bi-people", href: "students.do" }
     ]
   };

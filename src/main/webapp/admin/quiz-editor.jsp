@@ -82,7 +82,7 @@
         <div class="mb-3" style="max-width:150px;"><label class="form-label small fw-semibold">Points</label><input class="form-control" type="number" value="10"></div>
 
         <div data-qbody="MULTIPLE_CHOICE">
-          <label class="form-label small fw-semibold mb-2">Options <span class="text-secondary fw-normal">— tick the correct answer(s)</span></label>
+          <label class="form-label small fw-semibold mb-2">Options <span class="text-secondary fw-normal">- tick the correct answer(s)</span></label>
           <div class="d-flex align-items-center gap-2 mb-2"><input class="form-check-input mt-0" type="checkbox" style="flex:none;"><input class="form-control" placeholder="Option text"><button class="btn btn-sm btn-outline-secondary" style="flex:none;"><i class="bi bi-x-lg"></i></button></div>
           <div class="d-flex align-items-center gap-2 mb-2"><input class="form-check-input mt-0" type="checkbox" style="flex:none;"><input class="form-control" placeholder="Option text"><button class="btn btn-sm btn-outline-secondary" style="flex:none;"><i class="bi bi-x-lg"></i></button></div>
           <button class="btn btn-sm btn-light"><i class="bi bi-plus-lg me-1"></i>Add option</button>
