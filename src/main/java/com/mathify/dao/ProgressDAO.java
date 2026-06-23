@@ -44,6 +44,11 @@ public class ProgressDAO {
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // Reconcile achievements within the same connection so newly-earned
+            // badges are persisted before we read them back below.
+            reconcileAchievements(conn, studentId);
+
             ps.setString(1, studentId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
