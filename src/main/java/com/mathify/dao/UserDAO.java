@@ -307,7 +307,13 @@ public class UserDAO {
 
     private void refreshAllDueEnergy() throws SQLException {
         String sql = "UPDATE students s " +
-                     "LEFT JOIN (SELECT student_id, MAX(completed_at) AS last_quiz_at FROM quiz_attempts GROUP BY student_id) q " +
+                     "LEFT JOIN (" +
+                     "SELECT qa.student_id, MAX(qa.completed_at) AS last_quiz_at " +
+                     "FROM quiz_attempts qa " +
+                     "JOIN quizzes qz ON qz.quiz_id = qa.quiz_id " +
+                     "WHERE qa.score >= qz.passing_score " +
+                     "GROUP BY qa.student_id" +
+                     ") q " +
                      "ON q.student_id = s.student_id " +
                      "SET s.energy = ? " +
                      "WHERE s.energy < ? " +
@@ -322,7 +328,13 @@ public class UserDAO {
 
     private void refreshEnergyIfDue(String studentId) throws SQLException {
         String sql = "UPDATE students s " +
-                     "LEFT JOIN (SELECT student_id, MAX(completed_at) AS last_quiz_at FROM quiz_attempts GROUP BY student_id) q " +
+                     "LEFT JOIN (" +
+                     "SELECT qa.student_id, MAX(qa.completed_at) AS last_quiz_at " +
+                     "FROM quiz_attempts qa " +
+                     "JOIN quizzes qz ON qz.quiz_id = qa.quiz_id " +
+                     "WHERE qa.score >= qz.passing_score " +
+                     "GROUP BY qa.student_id" +
+                     ") q " +
                      "ON q.student_id = s.student_id " +
                      "SET s.energy = ? " +
                      "WHERE s.student_id = ? AND s.energy < ? " +
@@ -343,8 +355,11 @@ public class UserDAO {
             return;
         }
 
-        String sql = "SELECT LEAST(14400, GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(MAX(completed_at), INTERVAL 4 HOUR)))) " +
-                     "AS seconds_until_renewal FROM quiz_attempts WHERE student_id = ?";
+        String sql = "SELECT LEAST(14400, GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(MAX(qa.completed_at), INTERVAL 4 HOUR)))) " +
+                     "AS seconds_until_renewal " +
+                     "FROM quiz_attempts qa " +
+                     "JOIN quizzes q ON q.quiz_id = qa.quiz_id " +
+                     "WHERE qa.student_id = ? AND qa.score >= q.passing_score";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, student.getStudentId());

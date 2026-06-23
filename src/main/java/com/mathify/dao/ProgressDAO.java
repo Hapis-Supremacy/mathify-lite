@@ -17,8 +17,20 @@ import java.util.Set;
 
 public class ProgressDAO {
 
-    public record EnrolledCourse(String courseId, String title, String category, int progressPercent) {}
+    public record EnrolledCourse(String courseId, String title, String category, int progressPercent, boolean completed) {}
     public record QuizProgressResult(int xpDelta, boolean streakAwarded, int currentStreak) {}
+
+    public void enrollCourse(String studentId, String courseId) throws SQLException {
+        String sql = "INSERT INTO course_enrollments (student_id, course_id, enrolled_at) " +
+                     "VALUES (?, ?, NOW()) " +
+                     "ON DUPLICATE KEY UPDATE enrolled_at = enrolled_at";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, courseId);
+            ps.executeUpdate();
+        }
+    }
 
     /**
      * Loads the high-level progress (xp, level, streak) for a student.
@@ -49,9 +61,9 @@ public class ProgressDAO {
      * Gets the count of courses the student has completed.
      */
     public int getCompletedCoursesCount(String studentId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM course_enrollments WHERE student_id = ? AND completed_at IS NOT NULL";
         try (Connection conn = DBUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM course_enrollments WHERE student_id = ? AND completed_at IS NOT NULL")) {
+            reconcileProgress(conn, studentId);
             ps.setString(1, studentId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -62,6 +74,99 @@ public class ProgressDAO {
         return 0;
     }
 
+    public boolean hasCompletedCourse(String studentId, String courseId) throws SQLException {
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT 1 FROM course_enrollments WHERE student_id = ? AND course_id = ? AND completed_at IS NOT NULL")) {
+            reconcileProgress(conn, studentId);
+            ps.setString(1, studentId);
+            ps.setString(2, courseId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public int reconcileCourseCompletions(String studentId) throws SQLException {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int updated = reconcileCourseCompletions(conn, studentId);
+                conn.commit();
+                return updated;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+    }
+
+    private int reconcileCourseCompletions(Connection conn, String studentId) throws SQLException {
+        String sql = "UPDATE course_enrollments ce " +
+                     "SET ce.completed_at = NOW() " +
+                     "WHERE ce.student_id = ? " +
+                     "AND ce.completed_at IS NULL " +
+                     "AND EXISTS ( " +
+                     "  SELECT 1 FROM chapters ch " +
+                     "  WHERE ch.course_id = ce.course_id " +
+                     "  AND EXISTS (SELECT 1 FROM quizzes q WHERE q.chapter_id = ch.chapter_id) " +
+                     ") " +
+                     "AND NOT EXISTS ( " +
+                     "  SELECT 1 FROM chapters ch " +
+                     "  WHERE ch.course_id = ce.course_id " +
+                     "  AND EXISTS (SELECT 1 FROM quizzes q WHERE q.chapter_id = ch.chapter_id) " +
+                     "  AND EXISTS ( " +
+                     "    SELECT 1 FROM quizzes q " +
+                     "    WHERE q.chapter_id = ch.chapter_id " +
+                     "    AND NOT EXISTS ( " +
+                     "      SELECT 1 FROM quiz_attempts qa " +
+                     "      WHERE qa.student_id = ce.student_id " +
+                     "      AND qa.quiz_id = q.quiz_id " +
+                     "      AND qa.score >= q.passing_score " +
+                     "    ) " +
+                     "  ) " +
+                     ")";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            return ps.executeUpdate();
+        }
+    }
+
+    private void reconcileProgress(Connection conn, String studentId) throws SQLException {
+        completeReadyChapters(conn, studentId);
+        reconcileMissingEnrollments(conn, studentId);
+        reconcileCourseCompletions(conn, studentId);
+    }
+
+    private void reconcileMissingEnrollments(Connection conn, String studentId) throws SQLException {
+        String chapterProgressSql = "INSERT INTO course_enrollments (student_id, course_id, enrolled_at) " +
+                                    "SELECT ?, ch.course_id, MIN(cp.completed_at) " +
+                                    "FROM chapter_progress cp " +
+                                    "JOIN chapters ch ON cp.chapter_id = ch.chapter_id " +
+                                    "WHERE cp.student_id = ? " +
+                                    "GROUP BY ch.course_id " +
+                                    "ON DUPLICATE KEY UPDATE enrolled_at = LEAST(enrolled_at, VALUES(enrolled_at))";
+        try (PreparedStatement ps = conn.prepareStatement(chapterProgressSql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, studentId);
+            ps.executeUpdate();
+        }
+
+        String quizAttemptSql = "INSERT INTO course_enrollments (student_id, course_id, enrolled_at) " +
+                                "SELECT ?, ch.course_id, MIN(qa.completed_at) " +
+                                "FROM quiz_attempts qa " +
+                                "JOIN quizzes q ON qa.quiz_id = q.quiz_id " +
+                                "JOIN chapters ch ON q.chapter_id = ch.chapter_id " +
+                                "WHERE qa.student_id = ? " +
+                                "GROUP BY ch.course_id " +
+                                "ON DUPLICATE KEY UPDATE enrolled_at = LEAST(enrolled_at, VALUES(enrolled_at))";
+        try (PreparedStatement ps = conn.prepareStatement(quizAttemptSql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, studentId);
+            ps.executeUpdate();
+        }
+    }
+
     /**
      * Gets courses the student is currently enrolled in (not necessarily completed).
      * Calculates a simple progress percentage based on completed chapters vs total chapters.
@@ -69,8 +174,10 @@ public class ProgressDAO {
     public List<EnrolledCourse> getRecentEnrollments(String studentId) throws SQLException {
         List<EnrolledCourse> list = new ArrayList<>();
         String sql = 
-            "SELECT c.course_id, c.title, c.category, " +
-            "  (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.course_id) AS total_chapters, " +
+            "SELECT c.course_id, c.title, c.category, ce.completed_at, " +
+            "  (SELECT COUNT(*) FROM chapters ch " +
+            "   WHERE ch.course_id = c.course_id " +
+            "   AND EXISTS (SELECT 1 FROM quizzes q WHERE q.chapter_id = ch.chapter_id)) AS total_chapters, " +
             "  (SELECT COUNT(*) FROM chapter_progress cp " +
             "   JOIN chapters ch ON cp.chapter_id = ch.chapter_id " +
             "   WHERE ch.course_id = c.course_id AND cp.student_id = ? " +
@@ -92,6 +199,7 @@ public class ProgressDAO {
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            reconcileProgress(conn, studentId);
             ps.setString(1, studentId);
             ps.setString(2, studentId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -101,9 +209,13 @@ public class ProgressDAO {
                     String category = rs.getString("category");
                     int total = rs.getInt("total_chapters");
                     int completed = rs.getInt("completed_chapters");
+                    boolean courseCompleted = rs.getTimestamp("completed_at") != null;
                     
                     int percent = (total > 0) ? (int) Math.round((double) completed / total * 100.0) : 0;
-                    list.add(new EnrolledCourse(courseId, title, category, percent));
+                    if (courseCompleted) {
+                        percent = 100;
+                    }
+                    list.add(new EnrolledCourse(courseId, title, category, percent, courseCompleted));
                 }
             }
         }
@@ -339,6 +451,8 @@ public class ProgressDAO {
 
     private int reconcileUserXP(Connection conn, String studentId) throws SQLException {
         completeReadyChapters(conn, studentId);
+        reconcileMissingEnrollments(conn, studentId);
+        reconcileCourseCompletions(conn, studentId);
 
         int currentXP = getStoredXP(conn, studentId);
         int correctedXP = calculateQuizXP(conn, studentId) + calculateValidChapterXP(conn, studentId);

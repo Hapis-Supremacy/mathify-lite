@@ -21,6 +21,7 @@
               data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
               data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
               data-premium="${globalStudent.premiumActive}"
+              data-energy-locked="true"
               data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
           <div class="container py-4 shell">
             <div class="card border-0 shadow-sm mt-5">
@@ -68,7 +69,7 @@
           </div>
 
           <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-          <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
+          <script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
           <script>
             document.addEventListener('DOMContentLoaded', function () {
               var energyModal = document.getElementById('energyLockModal');
@@ -173,7 +174,7 @@
             });
           </script>
           <% } %>
-          <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
+          <script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
         </body>
 
         </html>
@@ -480,7 +481,7 @@
                       });
                     }
                   </script>
-                  <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
+                  <script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
           </body>
 
           </html>
