@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class CourseDAO {
 
@@ -338,5 +339,309 @@ public class CourseDAO {
             }
         }
         return null;
+    }
+
+    // ====================================================================
+    // Admin authoring: course-level CRUD + list summaries
+    // ====================================================================
+
+    /**
+     * Every course with its chapter count and enrollment count, for the
+     * admin Courses table. Counts are computed via correlated subqueries so
+     * a course with zero chapters/enrollments still shows a 0.
+     */
+    public List<AdminCourseDTO> getCourseSummaries() throws SQLException {
+        List<AdminCourseDTO> list = new ArrayList<>();
+        String sql =
+            "SELECT c.course_id, c.title, c.category, c.description, " +
+            "  (SELECT COUNT(*) FROM chapters ch WHERE ch.course_id = c.course_id) AS chapter_count, " +
+            "  (SELECT COUNT(*) FROM course_enrollments ce WHERE ce.course_id = c.course_id) AS enrolled_count " +
+            "FROM courses c ORDER BY c.created_at ASC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                AdminCourseDTO dto = new AdminCourseDTO();
+                dto.setCourseId(rs.getString("course_id"));
+                dto.setTitle(rs.getString("title"));
+                dto.setCategory(rs.getString("category"));
+                dto.setDescription(rs.getString("description"));
+                dto.setChapterCount(rs.getInt("chapter_count"));
+                dto.setEnrolledCount(rs.getInt("enrolled_count"));
+                list.add(dto);
+            }
+        }
+        return list;
+    }
+
+    /** Inserts a course and returns its generated id. */
+    public String createCourse(String title, String category, String description) throws SQLException {
+        String courseId = UUID.randomUUID().toString();
+        String sql = "INSERT INTO courses (course_id, title, category, description) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, courseId);
+            stmt.setString(2, title);
+            stmt.setString(3, category);
+            stmt.setString(4, description);
+            stmt.executeUpdate();
+        }
+        return courseId;
+    }
+
+    public void updateCourse(String courseId, String title, String category, String description) throws SQLException {
+        String sql = "UPDATE courses SET title = ?, category = ?, description = ? WHERE course_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, title);
+            stmt.setString(2, category);
+            stmt.setString(3, description);
+            stmt.setString(4, courseId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Deletes a course. Chapters/modules/quizzes cascade, but enrollments and
+     * progress use ON DELETE RESTRICT, so this throws if students are enrolled
+     * or have activity - the servlet surfaces that as a friendly error.
+     */
+    public void deleteCourse(String courseId) throws SQLException {
+        String sql = "DELETE FROM courses WHERE course_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, courseId);
+            stmt.executeUpdate();
+        }
+    }
+
+    // ====================================================================
+    // Admin authoring: chapter / module / quiz CRUD
+    // ====================================================================
+
+    public String createChapter(String courseId, String title, String description,
+                                int xpReward, int orderIndex) throws SQLException {
+        String chapterId = UUID.randomUUID().toString();
+        String sql = "INSERT INTO chapters (chapter_id, course_id, title, description, xp_reward, order_index) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, chapterId);
+            stmt.setString(2, courseId);
+            stmt.setString(3, title);
+            stmt.setString(4, description);
+            stmt.setInt(5, xpReward);
+            stmt.setInt(6, orderIndex);
+            stmt.executeUpdate();
+        }
+        return chapterId;
+    }
+
+    public void updateChapter(String chapterId, String title, String description,
+                              int xpReward, int orderIndex) throws SQLException {
+        String sql = "UPDATE chapters SET title = ?, description = ?, xp_reward = ?, order_index = ? " +
+                     "WHERE chapter_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, title);
+            stmt.setString(2, description);
+            stmt.setInt(3, xpReward);
+            stmt.setInt(4, orderIndex);
+            stmt.setString(5, chapterId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Chapter delete cascades to its modules and quizzes (FK ON DELETE CASCADE). */
+    public void deleteChapter(String chapterId) throws SQLException {
+        String sql = "DELETE FROM chapters WHERE chapter_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, chapterId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Inserts a learning module. {@code moduleType} is VIDEO or SLIDE; the
+     * schema CHECK requires exactly one of duration_secs / slide_count to be
+     * set, so the other is stored NULL.
+     */
+    public String createModule(String chapterId, String title, String moduleType, String contentUrl,
+                               Integer durationSecs, Integer slideCount, int orderIndex) throws SQLException {
+        String moduleId = UUID.randomUUID().toString();
+        String sql = "INSERT INTO learning_modules " +
+                     "(module_id, chapter_id, title, order_index, module_type, content_url, duration_secs, slide_count) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, moduleId);
+            bindModule(stmt, chapterId, title, moduleType, contentUrl, durationSecs, slideCount, orderIndex);
+            stmt.executeUpdate();
+        }
+        return moduleId;
+    }
+
+    public void updateModule(String moduleId, String title, String moduleType, String contentUrl,
+                             Integer durationSecs, Integer slideCount, int orderIndex) throws SQLException {
+        String sql = "UPDATE learning_modules SET title = ?, order_index = ?, module_type = ?, " +
+                     "content_url = ?, duration_secs = ?, slide_count = ? WHERE module_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, title);
+            stmt.setInt(2, orderIndex);
+            stmt.setString(3, moduleType);
+            stmt.setString(4, contentUrl);
+            setNullableInt(stmt, 5, "VIDEO".equals(moduleType) ? durationSecs : null);
+            setNullableInt(stmt, 6, "SLIDE".equals(moduleType) ? slideCount : null);
+            stmt.setString(7, moduleId);
+            stmt.executeUpdate();
+        }
+    }
+
+    public void deleteModule(String moduleId) throws SQLException {
+        String sql = "DELETE FROM learning_modules WHERE module_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, moduleId);
+            stmt.executeUpdate();
+        }
+    }
+
+    public String createQuiz(String chapterId, String title, int passingScore) throws SQLException {
+        String quizId = UUID.randomUUID().toString();
+        String sql = "INSERT INTO quizzes (quiz_id, chapter_id, title, passing_score) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, quizId);
+            stmt.setString(2, chapterId);
+            stmt.setString(3, title);
+            stmt.setInt(4, passingScore);
+            stmt.executeUpdate();
+        }
+        return quizId;
+    }
+
+    public void updateQuiz(String quizId, String title, int passingScore) throws SQLException {
+        String sql = "UPDATE quizzes SET title = ?, passing_score = ? WHERE quiz_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, title);
+            stmt.setInt(2, passingScore);
+            stmt.setString(3, quizId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Quiz delete cascades to its questions and their subtype rows. */
+    public void deleteQuiz(String quizId) throws SQLException {
+        String sql = "DELETE FROM quizzes WHERE quiz_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, quizId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Loads every chapter of a course with its modules and quizzes as raw
+     * admin DTOs (exact stored columns), for the content editor. Returns an
+     * empty list if the course has no chapters.
+     */
+    public List<AdminChapterDTO> getCourseEditorChapters(String courseId) throws SQLException {
+        List<AdminChapterDTO> chapters = new ArrayList<>();
+        String sql = "SELECT chapter_id, title, description, xp_reward, order_index " +
+                     "FROM chapters WHERE course_id = ? ORDER BY order_index ASC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, courseId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    AdminChapterDTO ch = new AdminChapterDTO();
+                    ch.setChapterId(rs.getString("chapter_id"));
+                    ch.setTitle(rs.getString("title"));
+                    ch.setDescription(rs.getString("description"));
+                    ch.setXpReward(rs.getInt("xp_reward"));
+                    ch.setOrderIndex(rs.getInt("order_index"));
+                    chapters.add(ch);
+                }
+            }
+        }
+        for (AdminChapterDTO ch : chapters) {
+            ch.setModules(getModuleRowsForChapter(ch.getChapterId()));
+            ch.setQuizzes(getQuizRowsForChapter(ch.getChapterId()));
+        }
+        return chapters;
+    }
+
+    private List<AdminModuleDTO> getModuleRowsForChapter(String chapterId) throws SQLException {
+        List<AdminModuleDTO> modules = new ArrayList<>();
+        String sql = "SELECT module_id, title, module_type, content_url, duration_secs, slide_count, order_index " +
+                     "FROM learning_modules WHERE chapter_id = ? ORDER BY order_index ASC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, chapterId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    AdminModuleDTO m = new AdminModuleDTO();
+                    m.setModuleId(rs.getString("module_id"));
+                    m.setTitle(rs.getString("title"));
+                    m.setModuleType(rs.getString("module_type"));
+                    m.setContentUrl(rs.getString("content_url"));
+                    int dur = rs.getInt("duration_secs");
+                    m.setDurationSecs(rs.wasNull() ? null : dur);
+                    int sc = rs.getInt("slide_count");
+                    m.setSlideCount(rs.wasNull() ? null : sc);
+                    m.setOrderIndex(rs.getInt("order_index"));
+                    modules.add(m);
+                }
+            }
+        }
+        return modules;
+    }
+
+    private List<AdminQuizDTO> getQuizRowsForChapter(String chapterId) throws SQLException {
+        List<AdminQuizDTO> quizzes = new ArrayList<>();
+        String sql = "SELECT q.quiz_id, q.title, q.passing_score, " +
+                     "  (SELECT COUNT(*) FROM questions qs WHERE qs.quiz_id = q.quiz_id) AS question_count " +
+                     "FROM quizzes q WHERE q.chapter_id = ? ORDER BY q.title ASC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, chapterId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    AdminQuizDTO q = new AdminQuizDTO();
+                    q.setQuizId(rs.getString("quiz_id"));
+                    q.setTitle(rs.getString("title"));
+                    q.setPassingScore(rs.getInt("passing_score"));
+                    q.setQuestionCount(rs.getInt("question_count"));
+                    quizzes.add(q);
+                }
+            }
+        }
+        return quizzes;
+    }
+
+    // ---- helpers --------------------------------------------------------
+
+    private void bindModule(PreparedStatement stmt, String chapterId, String title, String moduleType,
+                            String contentUrl, Integer durationSecs, Integer slideCount, int orderIndex)
+            throws SQLException {
+        // module_id is placeholder 1 (set by the caller); 2-8 follow the INSERT column order.
+        stmt.setString(2, chapterId);
+        stmt.setString(3, title);
+        stmt.setInt(4, orderIndex);
+        stmt.setString(5, moduleType);
+        stmt.setString(6, contentUrl);
+        setNullableInt(stmt, 7, "VIDEO".equals(moduleType) ? durationSecs : null);
+        setNullableInt(stmt, 8, "SLIDE".equals(moduleType) ? slideCount : null);
+    }
+
+    private void setNullableInt(PreparedStatement stmt, int index, Integer value) throws SQLException {
+        if (value == null) {
+            stmt.setNull(index, java.sql.Types.INTEGER);
+        } else {
+            stmt.setInt(index, value);
+        }
     }
 }
