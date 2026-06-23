@@ -1,0 +1,11 @@
+# OCW -> Mathify import pipeline.
+# Each dep is only needed for the stage/provider you actually run.
+cloudinary>=1.40.0    # cloudinary_upload: host SLIDE PDFs (resource_type="raw")
+pypdf>=4.0.0          # cloudinary_upload: PDF page count -> slide_count
+
+# quiz_extract, provider "claude" (paid): Claude API, PDF document blocks
+anthropic>=0.92.0
+
+# quiz_extract, provider "ollama" (free, local): rasterize PDFs + call Ollama
+pymupdf>=1.24.0       # render PDF pages to PNG (no system deps; Windows-friendly)
+ollama>=0.4.0         # local vision model client (structured outputs via format=)

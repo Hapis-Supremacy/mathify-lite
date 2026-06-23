@@ -101,12 +101,22 @@ public final class MidtransConfig {
         return Boolean.parseBoolean(get("MIDTRANS_IS_PRODUCTION", "false"));
     }
 
-    /** Premium plan price in whole IDR (Midtrans requires integer amounts). */
-    public static long getPremiumPriceIdr() {
+    /** Monthly premium price in whole IDR (Midtrans requires integer amounts). */
+    public static long getMonthlyPriceIdr() {
+        return getLong("MIDTRANS_PRICE_MONTHLY", 125_500L);
+    }
+
+    /** Yearly premium price in whole IDR (Midtrans requires integer amounts). */
+    public static long getYearlyPriceIdr() {
+        return getLong("MIDTRANS_PRICE_YEARLY", 1_224_500L);
+    }
+
+    /** Parses a whole-number config value, falling back on missing/invalid input. */
+    private static long getLong(String key, long fallback) {
         try {
-            return Long.parseLong(get("MIDTRANS_PREMIUM_PRICE", "49000"));
+            return Long.parseLong(get(key, Long.toString(fallback)));
         } catch (NumberFormatException e) {
-            return 49000L;
+            return fallback;
         }
     }
 

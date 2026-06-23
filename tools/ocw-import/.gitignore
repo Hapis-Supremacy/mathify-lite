@@ -1,0 +1,4 @@
+# Regenerable pipeline artifacts (structure.json, modules.json,
+# cloudinary.json, quizzes.json). Re-create with: python ocw_import.py all
+build/
+__pycache__/

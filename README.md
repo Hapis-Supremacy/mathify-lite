@@ -60,7 +60,8 @@ Credentials are read from a `.env` file at the project root (gitignored).
    MIDTRANS_CLIENT_KEY=Mid-client-xxxxxxxx
    MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxx
    MIDTRANS_IS_PRODUCTION=false      # sandbox; set true for production
-   MIDTRANS_PREMIUM_PRICE=49000      # IDR charged per month
+   MIDTRANS_PRICE_MONTHLY=125500     # IDR charged for the monthly plan
+   MIDTRANS_PRICE_YEARLY=1224500     # IDR charged for the yearly plan
    ```
 
 2. Add the payment-tracking columns to an existing database (fresh installs

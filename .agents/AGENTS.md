@@ -9,16 +9,11 @@ These are common instructions across all scenarios.
 - Never use the em dash "—". Use plain dash "-" instead.
 - When writing commit messages, NEVER auto-add your agent name as co-author.
 - Never manually modify any files that are marked as auto-generated.
-- When writing or substantially editing long Markdown files, put each full sentence on its own line.
-- Preserve normal Markdown structure, but avoid wrapping multiple sentences onto one physical line.
-- When making technical decisions, do not give much weight to development cost.
-- Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability.
-- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user experiences it.
-- This makes sure you find the real problem so your fix will actually solve it.
-- When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection.
-- If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.
-- Apply that same high standard to engineering excellence: lint, test failures, and test flakiness.
-- If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+- When writing or substantially editing long Markdown files, put each full sentence on its own line. Preserve normal Markdown structure, but avoid wrapping multiple sentences onto one physical line.
+- When making technical decisions, do not give much weight to development cost. Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability.
+- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user experiences it. This makes sure you find the real problem so your fix will actually solve it.
+- When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way. Apply that same high standard to engineering excellence: lint, test failures, and test flakiness. If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+- Before committing, make sure `.env.example` is aligned with `.env`, since people tend to forget updating `.env.example`. Whenever you add, rename, or remove a key in `.env`, mirror the change in `.env.example` with a placeholder value (never a real secret) and a brief comment. The two files should always have the same set of keys.
 
 ## Related docs
 
@@ -127,12 +122,13 @@ XAMPP ships its own Tomcat on port 8080; if `cargo:run` reports "Port 8080 in us
 ## Payments (Midtrans)
 
 The "Go Premium" upgrade uses the Midtrans Snap flow, sandbox by default.
-Credentials come from a gitignored `.env` at the project root, read by `com.mathify.util.MidtransConfig` (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_MERCHANT_ID`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_PREMIUM_PRICE`); OS env vars override the file.
+Credentials come from a gitignored `.env` at the project root, read by `com.mathify.util.MidtransConfig` (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_MERCHANT_ID`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_PRICE_MONTHLY`, `MIDTRANS_PRICE_YEARLY`); OS env vars override the file.
 Never hard-code keys; see `.env.example`.
 The server is the source of truth: `PremiumCheckoutServlet` (`/student/premium/checkout.do`) creates the Snap token with a server-side fixed amount, and `PremiumConfirmServlet` (`/student/premium/confirm.do`) re-verifies the transaction status with Midtrans before granting premium.
 Never trust the browser's success callback or a client-supplied amount.
 The HTTP calls live in `com.mathify.service.MidtransService` (Basic auth = `Base64(serverKey + ":")`).
 There are two plans, selected via the `plan` request parameter: monthly (Rp 125.500, 30 days) and yearly (Rp 1.224.500, 365 days).
+Plan prices are env-driven via `MIDTRANS_PRICE_MONTHLY` / `MIDTRANS_PRICE_YEARLY` (those rupiah amounts are the defaults), resolved server-side in `PremiumCheckoutServlet.resolvePlan`; the durations are fixed in code.
 No webhook is needed on localhost: activation happens in `confirm.do` via a status check; for production, also configure a Midtrans notification URL.
 Premium is persisted by `com.mathify.dao.SubscriptionDAO` into the `subscriptions` table; tracking columns `midtrans_order_id` and `payment_status` were added (see `database/migration_add_payment_tracking.sql`).
 Admins can manually grant or revoke premium from the Students page via the `grant_premium` and `revoke_premium` actions, as an override.

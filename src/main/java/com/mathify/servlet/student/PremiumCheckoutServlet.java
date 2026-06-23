@@ -39,9 +39,9 @@ public class PremiumCheckoutServlet extends HttpServlet {
     /** Resolves the requested plan; defaults to Monthly for anything unknown. */
     private static PremiumPlan resolvePlan(String key) {
         if ("yearly".equalsIgnoreCase(key)) {
-            return new PremiumPlan("Premium Yearly", 1_224_500L, 365);
+            return new PremiumPlan("Premium Yearly", MidtransConfig.getYearlyPriceIdr(), 365);
         }
-        return new PremiumPlan("Premium Monthly", 125_500L, 30);
+        return new PremiumPlan("Premium Monthly", MidtransConfig.getMonthlyPriceIdr(), 30);
     }
 
     @Override
