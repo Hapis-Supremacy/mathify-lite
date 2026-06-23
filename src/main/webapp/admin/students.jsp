@@ -175,6 +175,6 @@
     });
   })();
 </script>
-<script src="../assets/js/app.js?v=4" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

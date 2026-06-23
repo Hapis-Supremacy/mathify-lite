@@ -51,6 +51,11 @@ public final class SlideModule implements LearningModule {
         return Duration.ofSeconds((long) secondsPerSlide * slides.size());
     }
 
+    @Override
+    public int getXpReward() {
+        return info.xpReward();
+    }
+
     public List<Slide> getSlides() {
         return slides;
     }

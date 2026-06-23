@@ -17,22 +17,26 @@
       dynamicUserName = "User";
   }
 
-  // Sample profile — mirrors the prototype's initial state.
+  // Sample profile — mirrors the prototype's initial state or dynamic values.
   var profile = {
     name: dynamicUserName,
-    level: 4,
-    totalXP: 1240,
-    streak: 12,
-    energy: 4,
-    energyMax: 5,
-    premium: false
+    level: document.body.dataset.level ? parseInt(document.body.dataset.level, 10) : 0,
+    totalXP: document.body.dataset.xp ? parseInt(document.body.dataset.xp, 10) : 0,
+    streak: document.body.dataset.streak ? parseInt(document.body.dataset.streak, 10) : 0,
+    energy: document.body.dataset.energy ? parseInt(document.body.dataset.energy, 10) : 0,
+    energyMax: document.body.dataset.energyMax ? parseInt(document.body.dataset.energyMax, 10) : 5,
+    energyRenewsAt: document.body.dataset.energyRenewsAt ? parseInt(document.body.dataset.energyRenewsAt, 10) : 0,
+    premium: document.body.dataset.premium === "true",
+    subscriptionPlan: document.body.dataset.subscriptionPlan || ""
   };
+  var energyCountdownTimer = null;
+  var energyLockReloaded = false;
 
   var NAV = {
     student: [
       { key: "dashboard",    label: "Dashboard",    icon: "bi-house-door",      href: "dashboard.do" },
       { key: "catalog",      label: "Courses",      icon: "bi-grid",            href: "catalog.do" },
-      { key: "achievements", label: "Achievements", icon: "bi-trophy",          href: "achievements.jsp" },
+      { key: "achievements", label: "Achievements", icon: "bi-trophy",          href: "achievements.do" },
       { key: "premium",      label: "Premium",      icon: "bi-gem",             href: "premium.jsp" }
     ],
     admin: [
@@ -50,6 +54,63 @@
     var t = document.createElement("template");
     t.innerHTML = html.trim();
     return t.content.firstChild;
+  }
+
+  function formatCountdown(ms) {
+    var totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
+  }
+
+  function energyRenewalText() {
+    if (profile.premium) {
+      return "Unlimited energy";
+    }
+    if (profile.energy >= profile.energyMax) {
+      return "Energy full";
+    }
+    if (!profile.energyRenewsAt) {
+      return "Energy renews after 00:00";
+    }
+    return "Energy renews after " + formatCountdown(profile.energyRenewsAt - Date.now());
+  }
+
+  function updateEnergyCountdown() {
+    var energyValues = document.querySelectorAll("[data-energy-value]");
+    var energyPills = document.querySelectorAll("[data-energy-renewal]");
+    if (!energyValues.length && !energyPills.length) {
+      return;
+    }
+
+    if (profile.premium) {
+      energyValues.forEach(function (node) {
+        node.textContent = "Unlimited";
+      });
+      energyPills.forEach(function (node) {
+        node.textContent = "";
+        node.style.display = "none";
+      });
+      return;
+    }
+
+    if (profile.energy < profile.energyMax && profile.energyRenewsAt && Date.now() >= profile.energyRenewsAt) {
+      profile.energy = profile.energyMax;
+      profile.energyRenewsAt = 0;
+      if (document.body.dataset.energyLocked === "true" && !energyLockReloaded) {
+        energyLockReloaded = true;
+        window.location.reload();
+        return;
+      }
+    }
+
+    energyValues.forEach(function (node) {
+      node.textContent = profile.energy + "/" + profile.energyMax;
+    });
+    energyPills.forEach(function (node) {
+      node.style.display = "";
+      node.textContent = energyRenewalText();
+    });
   }
 
   function render() {
@@ -81,8 +142,11 @@
       cluster =
         '<div class="d-none d-md-flex align-items-center gap-3">' +
           premiumBadge +
-          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
-          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#1d4e89;" title="Energy"><i class="bi bi-lightning-charge-fill"></i>' + energyLabel + "</span>" +
+          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Quiz-day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
+          '<span class="d-flex align-items-center gap-2 fw-semibold" style="color:#1d4e89;" title="Energy">' +
+            '<span class="d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill"></i><span data-energy-value>' + energyLabel + "</span></span>" +
+            (profile.premium ? "" : '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>") +
+          "</span>" +
           '<span class="badge rounded-pill" style="background:#eef3fa;color:#1d4e89;border:1px solid #d6e2f1;font-weight:600;">Lv ' + profile.level + " &middot; " + profile.totalXP + " XP</span>" +
         "</div>";
     }
@@ -115,6 +179,10 @@
     );
 
     body.insertBefore(nav, body.firstChild);
+    updateEnergyCountdown();
+    if (!energyCountdownTimer) {
+      energyCountdownTimer = window.setInterval(updateEnergyCountdown, 1000);
+    }
   }
 
   // Pull the student's real header data (premium status, energy, streak, XP)
@@ -127,8 +195,10 @@
         if (!data || data.error) { return; }
         profile.name = data.name || profile.name;
         profile.premium = !!data.premium;
+        profile.subscriptionPlan = data.subscriptionPlan || "";
         if (typeof data.energy === "number") { profile.energy = data.energy; }
         if (typeof data.energyMax === "number") { profile.energyMax = data.energyMax; }
+        if (typeof data.energyRenewsAt === "number") { profile.energyRenewsAt = data.energyRenewsAt; }
         if (typeof data.streak === "number") { profile.streak = data.streak; }
         if (typeof data.level === "number") { profile.level = data.level; }
         if (typeof data.totalXp === "number") { profile.totalXP = data.totalXp; }

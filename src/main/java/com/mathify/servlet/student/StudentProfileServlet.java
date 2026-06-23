@@ -23,7 +23,7 @@ import java.sql.SQLException;
  * (assets/js/app.js) can show the real premium badge, energy, streak and XP
  * instead of the hard-coded sample values.
  *
- * <p>GET /student/profile.do — protected by {@code StudentAuthFilter}.
+ * <p>GET /student/profile.do - protected by {@code StudentAuthFilter}.
  */
 @WebServlet("/student/profile.do")
 public class StudentProfileServlet extends HttpServlet {
@@ -61,12 +61,15 @@ public class StudentProfileServlet extends HttpServlet {
             UserProgress progress = progressDAO.getUserProgress(userId);
             SubscriptionDAO.SubscriptionInfo sub = subscriptionDAO.getByStudentId(userId);
             boolean premium = sub != null && sub.isActive();
+            String subscriptionPlan = premium && sub.plan() != null ? sub.plan() : "";
 
             JSONObject out = new JSONObject()
                     .put("name", student.getName())
                     .put("premium", premium)
+                    .put("subscriptionPlan", subscriptionPlan)
                     .put("energy", student.getEnergy())
                     .put("energyMax", ENERGY_MAX)
+                    .put("energyRenewsAt", student.getEnergyRenewalEpochMillis())
                     .put("streak", progress.getCurrentStreak())
                     .put("level", progress.getLevel())
                     .put("totalXp", progress.getTotalXP());

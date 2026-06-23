@@ -17,4 +17,6 @@ public interface LearningModule {
     ModuleType getType();
 
     Duration estimatedDuration();
+
+    int getXpReward();
 }

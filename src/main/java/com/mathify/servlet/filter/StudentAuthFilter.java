@@ -31,6 +31,25 @@ public class StudentAuthFilter implements Filter {
         if (session != null && session.getAttribute("userId") != null) {
             String role = (String) session.getAttribute("userRole");
             if ("STUDENT".equals(role)) {
+                try {
+                    String sid = (String) session.getAttribute("userId");
+                    Student globalStudent = userDAO.getStudentById(sid);
+                    
+                    // If student no longer exists in the DB (e.g. DB was wiped), invalidate the stale session
+                    if (globalStudent == null) {
+                        session.invalidate();
+                        AuthUtil.clearAuthCookie(resp);
+                        resp.sendRedirect(req.getContextPath() + "/login.jsp?error=session_expired");
+                        return;
+                    }
+
+                    com.mathify.dao.ProgressDAO pDao = new com.mathify.dao.ProgressDAO();
+                    com.mathify.model.UserProgress globalProgress = pDao.getUserProgress(sid);
+                    req.setAttribute("globalStudent", globalStudent);
+                    req.setAttribute("globalProgress", globalProgress);
+                } catch (Exception e) {
+                    req.getServletContext().log("Failed to load global profile data", e);
+                }
                 chain.doFilter(request, response);
                 return;
             } else if ("ADMIN".equals(role)) {
@@ -63,6 +82,14 @@ public class StudentAuthFilter implements Filter {
                         session.setAttribute("userId", student.getUserId());
                         session.setAttribute("userName", student.getName());
                         session.setAttribute("userRole", "STUDENT");
+                        
+                        try {
+                            com.mathify.dao.ProgressDAO pDao = new com.mathify.dao.ProgressDAO();
+                            com.mathify.model.UserProgress globalProgress = pDao.getUserProgress(userId);
+                            req.setAttribute("globalStudent", student);
+                            req.setAttribute("globalProgress", globalProgress);
+                        } catch (Exception e) {}
+
                         chain.doFilter(request, response);
                         return;
                     }

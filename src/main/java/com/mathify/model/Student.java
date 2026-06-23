@@ -9,6 +9,8 @@ public class Student extends User {
     private Subscribable subscription;
     private UserProgress progress;
     private int energy;
+    private int maxEnergy = 5;
+    private long energyRenewalEpochMillis;
 
     public Student() {
     }
@@ -47,6 +49,10 @@ public class Student extends User {
         this.subscription = subscription;
     }
 
+    public boolean isPremiumActive() {
+        return subscription != null && subscription.isActive();
+    }
+
     public UserProgress getProgress() {
         return progress;
     }
@@ -61,5 +67,21 @@ public class Student extends User {
 
     public void setEnergy(int energy) {
         this.energy = energy;
+    }
+
+    public int getMaxEnergy() {
+        return maxEnergy;
+    }
+
+    public void setMaxEnergy(int maxEnergy) {
+        this.maxEnergy = maxEnergy;
+    }
+
+    public long getEnergyRenewalEpochMillis() {
+        return energyRenewalEpochMillis;
+    }
+
+    public void setEnergyRenewalEpochMillis(long energyRenewalEpochMillis) {
+        this.energyRenewalEpochMillis = energyRenewalEpochMillis;
     }
 }

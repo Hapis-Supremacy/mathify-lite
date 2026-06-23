@@ -101,7 +101,7 @@ public class CourseDAO {
                     java.sql.Timestamp createdAtTs = rs.getTimestamp("created_at");
                     LocalDateTime createdAt = createdAtTs != null ? createdAtTs.toLocalDateTime() : LocalDateTime.now();
 
-                    ModuleInfo info = new ModuleInfo(id, title, orderIndex, createdAt);
+                    ModuleInfo info = new ModuleInfo(id, title, orderIndex, createdAt, 0);
                     String typeStr = rs.getString("module_type");
 
                     if ("VIDEO".equals(typeStr)) {
@@ -133,6 +133,7 @@ public class CourseDAO {
                 while (rs.next()) {
                     Quiz quiz = new Quiz();
                     quiz.setQuizId(rs.getString("quiz_id"));
+                    quiz.setChapterId(chapterId);
                     quiz.setTitle(rs.getString("title"));
                     quiz.setPassingScore(rs.getInt("passing_score"));
                     
@@ -144,6 +145,29 @@ public class CourseDAO {
         return quizzes;
     }
 
+    public Quiz getQuizById(String quizId) throws SQLException {
+        Quiz quiz = null;
+        String sql = "SELECT quiz_id, chapter_id, title, passing_score FROM quizzes WHERE quiz_id = ?";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, quizId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    quiz = new Quiz();
+                    quiz.setQuizId(rs.getString("quiz_id"));
+                    quiz.setChapterId(rs.getString("chapter_id"));
+                    quiz.setTitle(rs.getString("title"));
+                    quiz.setPassingScore(rs.getInt("passing_score"));
+                }
+            }
+        }
+        if (quiz != null) {
+            quiz.setQuestions(getQuestionsForQuiz(quizId));
+        }
+        return quiz;
+    }
+
     private List<Question> getQuestionsForQuiz(String quizId) throws SQLException {
         List<Question> questions = new ArrayList<>();
         String sql = "SELECT question_id, prompt, points, question_type, order_index FROM questions WHERE quiz_id = ? ORDER BY order_index ASC";
@@ -153,18 +177,166 @@ public class CourseDAO {
             stmt.setString(1, quizId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    final String qId = rs.getString("question_id");
-                    final int points = rs.getInt("points");
-                    final String type = rs.getString("question_type");
+                    String qId = rs.getString("question_id");
+                    String prompt = rs.getString("prompt");
+                    int points = rs.getInt("points");
+                    int orderIndex = rs.getInt("order_index");
+                    String type = rs.getString("question_type");
                     
-                    questions.add(new Question() {
-                        @Override public QuestionInfo getInfo() { return new QuestionInfo(qId, "", points); }
-                        @Override public QuestionType getType() { return QuestionType.valueOf(type); }
-                        @Override public boolean evaluate(Answer a) { return false; }
-                    });
+                    QuestionInfo info = new QuestionInfo(qId, prompt, points);
+
+                    QuestionType questionType;
+                    try {
+                        questionType = QuestionType.valueOf(type.trim());
+                    } catch (IllegalArgumentException | NullPointerException e) {
+                        throw new SQLException("Unsupported question type for question " + qId + ": " + type, e);
+                    }
+
+                    switch (questionType) {
+                        case MULTIPLE_CHOICE -> questions.add(getMultipleChoiceQuestion(conn, info));
+                        case FILL_BLANK -> questions.add(getFillBlankQuestion(conn, info));
+                        case DRAG_AND_DROP -> questions.add(getDragDropQuestion(conn, info));
+                    }
                 }
             }
         }
         return questions;
+    }
+
+    private MultipleChoiceQuestion getMultipleChoiceQuestion(Connection conn, QuestionInfo info) throws SQLException {
+        List<MultipleChoiceQuestion.Option> options = new ArrayList<>();
+        java.util.Set<String> correctIds = new java.util.HashSet<>();
+        
+        String sql = "SELECT option_id, option_text, is_correct FROM multiple_choice_options WHERE question_id = ? ORDER BY order_index ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String optId = rs.getString("option_id");
+                    options.add(new MultipleChoiceQuestion.Option(optId, rs.getString("option_text")));
+                    if (rs.getBoolean("is_correct")) correctIds.add(optId);
+                }
+            }
+        }
+        return new MultipleChoiceQuestion(info, options, correctIds);
+    }
+
+    private FillBlankQuestion getFillBlankQuestion(Connection conn, QuestionInfo info) throws SQLException {
+        boolean caseSensitive = false;
+        String sqlInfo = "SELECT case_sensitive FROM fill_blank_questions WHERE question_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlInfo)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) caseSensitive = rs.getBoolean("case_sensitive");
+            }
+        }
+        
+        List<String> answers = new ArrayList<>();
+        String sqlAns = "SELECT answer_text FROM fill_blank_answers WHERE question_id = ? ORDER BY answer_id ASC";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlAns)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) answers.add(rs.getString("answer_text"));
+            }
+        }
+        return new FillBlankQuestion(info, answers, caseSensitive);
+    }
+
+    private DragDropQuestion getDragDropQuestion(Connection conn, QuestionInfo info) throws SQLException {
+        List<DragItem> draggables = new ArrayList<>();
+        List<DropZone> dropZones = new ArrayList<>();
+        java.util.Map<String, String> pairings = new java.util.HashMap<>();
+        
+        String sqlDrag = "SELECT drag_item_id, label FROM drag_items WHERE question_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlDrag)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) draggables.add(new DragItem(rs.getString("drag_item_id"), rs.getString("label")));
+            }
+        }
+        
+        String sqlDrop = "SELECT drop_zone_id, label FROM drop_zones WHERE question_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlDrop)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) dropZones.add(new DropZone(rs.getString("drop_zone_id"), rs.getString("label")));
+            }
+        }
+        
+        String sqlPair = "SELECT drag_item_id, drop_zone_id FROM drag_drop_pairings WHERE question_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlPair)) {
+            stmt.setString(1, info.id());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) pairings.put(rs.getString("drop_zone_id"), rs.getString("drag_item_id"));
+            }
+        }
+        
+        return new DragDropQuestion(info, draggables, dropZones, pairings);
+    }
+
+    public LearningModule getModuleById(String moduleId) throws SQLException {
+        String sql = "SELECT module_id, title, order_index, module_type, content_url, duration_secs, slide_count, created_at " +
+                     "FROM learning_modules WHERE module_id = ?";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, moduleId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String id = rs.getString("module_id");
+                    String title = rs.getString("title");
+                    int orderIndex = rs.getInt("order_index");
+                    java.sql.Timestamp createdAtTs = rs.getTimestamp("created_at");
+                    LocalDateTime createdAt = createdAtTs != null ? createdAtTs.toLocalDateTime() : LocalDateTime.now();
+
+                    ModuleInfo info = new ModuleInfo(id, title, orderIndex, createdAt, 0);
+                    String typeStr = rs.getString("module_type");
+
+                    if ("VIDEO".equals(typeStr)) {
+                        int durationSecs = rs.getInt("duration_secs");
+                        String url = rs.getString("content_url");
+                        return new VideoModule(info, url, Duration.ofSeconds(durationSecs), null);
+                    } else if ("SLIDE".equals(typeStr)) {
+                        int slideCount = rs.getInt("slide_count");
+                        List<Slide> slides = new ArrayList<>();
+                        for (int i = 0; i < slideCount; i++) {
+                            slides.add(new Slide(i, "", "")); // mock slide
+                        }
+                        return new SlideModule(info, slides, 30);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getCourseIdForModule(String moduleId) throws SQLException {
+        String sql = "SELECT c.course_id FROM learning_modules lm " +
+                     "JOIN chapters c ON lm.chapter_id = c.chapter_id " +
+                     "WHERE lm.module_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, moduleId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("course_id");
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getCourseIdForChapter(String chapterId) throws SQLException {
+        String sql = "SELECT course_id FROM chapters WHERE chapter_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, chapterId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("course_id");
+                }
+            }
+        }
+        return null;
     }
 }

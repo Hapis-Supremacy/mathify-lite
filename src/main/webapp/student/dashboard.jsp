@@ -31,7 +31,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <link href="../assets/css/app.css" rel="stylesheet">
 </head>
-<body data-role="student" data-page="dashboard" data-base="../">
+<body data-role="student" data-page="dashboard" data-base="../"
+      data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
+      data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
+      data-premium="${globalStudent.premiumActive}"
+      data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
 
 <div class="container py-4 shell">
 
@@ -43,13 +47,15 @@
   <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
       <div class="card h-100 shadow-sm border-0"><div class="card-body">
-        <div class="d-flex align-items-center gap-2 text-secondary mb-1"><i class="bi bi-fire" style="color:#d97706;"></i><span class="small fw-semibold">Day Streak</span></div>
-        <div class="fs-3 fw-bold"><%= progress.getCurrentStreak() %></div></div></div>
+        <div class="d-flex align-items-center gap-2 text-secondary mb-1"><i class="bi bi-fire" style="color:#d97706;"></i><span class="small fw-semibold">Quiz Streak</span></div>
+        <div class="fs-3 fw-bold"><%= progress.getCurrentStreak() %></div>
+        <div class="text-secondary small">One counted quiz per day</div></div></div>
     </div>
     <div class="col-6 col-lg-3">
       <div class="card h-100 shadow-sm border-0"><div class="card-body">
         <div class="d-flex align-items-center gap-2 text-secondary mb-1"><i class="bi bi-lightning-charge-fill" style="color:#1d4e89;"></i><span class="small fw-semibold">Energy</span></div>
-        <div class="fs-3 fw-bold"><%= student.getEnergy() %>/5</div></div></div>
+        <div class="fs-3 fw-bold" data-energy-value><%= student.getEnergy() %>/<%= student.getMaxEnergy() %></div>
+        <span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal></span></div></div>
     </div>
     <div class="col-6 col-lg-3">
       <div class="card h-100 shadow-sm border-0"><div class="card-body">
@@ -68,7 +74,7 @@
       <div><div class="text-secondary small fw-semibold">LEVEL <%= progress.getLevel() %></div><h5 class="mb-0"><%= progress.getTotalXP() %> / <%= nextLevelXP %> XP</h5></div>
       <div class="text-secondary small">Next: Level <%= progress.getLevel() + 1 %></div>
     </div>
-    <div class="progress" style="height:12px;"><div class="progress-bar" style="width:<%= progressPercent %>%;"></div></div>
+    <div class="progress" style="height:12px;"><% out.print("<div class=\"progress-bar\" style=\"width:" + progressPercent + "%;\"></div>"); %></div>
   </div></div>
 
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -84,10 +90,16 @@
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div><span class="badge rounded-pill mb-2 badge-soft"><%= ec.category() %></span>
           <h5 class="mb-0"><%= ec.title() %></h5></div>
+          <% if (ec.completed()) { %>
+          <span class="badge rounded-pill bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+          <% } else { %>
           <span class="text-secondary small"><%= ec.progressPercent() %>%</span>
+          <% } %>
         </div>
-        <div class="progress mb-3" style="height:8px;"><div class="progress-bar" style="width:<%= ec.progressPercent() %>%;"></div></div>
-        <a class="btn btn-primary btn-sm" href="course.do?id=<%= ec.courseId() %>"><i class="bi bi-play-fill me-1"></i>Continue</a>
+        <div class="progress mb-3" style="height:8px;"><% out.print("<div class=\"progress-bar\" style=\"width:" + ec.progressPercent() + "%;\"></div>"); %></div>
+        <a class="btn <%= ec.completed() ? "btn-outline-success" : "btn-primary" %> btn-sm" href="course.do?id=<%= ec.courseId() %>">
+          <i class="bi <%= ec.completed() ? "bi-check-circle" : "bi-play-fill" %> me-1"></i><%= ec.completed() ? "Review course" : "Continue" %>
+        </a>
       </div></div>
     </div>
     <%     }
@@ -101,6 +113,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=4" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

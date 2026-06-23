@@ -7,15 +7,17 @@ public class Achievement {
     private String title;
     private String category;
     private String requirement;
+    private String icon;
 
     public Achievement() {
     }
 
-    public Achievement(String achievementId, String title, String category, String requirement) {
+    public Achievement(String achievementId, String title, String category, String requirement, String icon) {
         this.achievementId = achievementId;
         this.title = title;
         this.category = category;
         this.requirement = requirement;
+        this.icon = icon;
     }
 
     public String getId() {
@@ -48,5 +50,13 @@ public class Achievement {
 
     public void setRequirement(String requirement) {
         this.requirement = requirement;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
     }
 }

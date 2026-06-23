@@ -52,6 +52,11 @@ public final class VideoModule implements LearningModule {
         return duration;
     }
 
+    @Override
+    public int getXpReward() {
+        return info.xpReward();
+    }
+
     public String getVideoUrl() {
         return videoUrl;
     }
