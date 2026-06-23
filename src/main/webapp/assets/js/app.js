@@ -14,7 +14,7 @@
   var currentScript = document.querySelector('script[src*="app.js"]');
   var dynamicUserName = currentScript ? currentScript.getAttribute("data-username") : null;
   if (!dynamicUserName || dynamicUserName.trim() === "") {
-      dynamicUserName = "User";
+    dynamicUserName = "User";
   }
 
   // Sample profile — mirrors the prototype's initial state or dynamic values.
@@ -40,9 +40,9 @@
       { key: "premium",      label: "Premium",      icon: "bi-gem",             href: "premium.jsp" }
     ],
     admin: [
-      { key: "overview", label: "Overview", icon: "bi-graph-up-arrow", href: "dashboard.jsp" },
-      { key: "courses",  label: "Courses",  icon: "bi-mortarboard",    href: "courses.jsp" },
-      { key: "students", label: "Students", icon: "bi-people",         href: "students.jsp" }
+      { key: "overview", label: "Overview", icon: "bi-graph-up-arrow", href: "dashboard.do" },
+      { key: "courses", label: "Courses", icon: "bi-mortarboard", href: "courses.jsp" },
+      { key: "students", label: "Students", icon: "bi-people", href: "students.do" }
     ]
   };
 
@@ -129,7 +129,7 @@
     var navLinks = items.map(function (n) {
       var active = n.key === page ? " active" : "";
       return '<li class="nav-item"><a class="nav-link px-3' + active + '" href="' + n.href + '">' +
-             '<i class="bi ' + n.icon + ' me-2"></i>' + n.label + "</a></li>";
+        '<i class="bi ' + n.icon + ' me-2"></i>' + n.label + "</a></li>";
     }).join("");
 
     // student-only profile cluster (streak / energy / level)
@@ -141,13 +141,13 @@
         : '<a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="premium.jsp"><i class="bi bi-gem"></i>Upgrade</a>';
       cluster =
         '<div class="d-none d-md-flex align-items-center gap-3">' +
-          premiumBadge +
-          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Quiz-day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
-          '<span class="d-flex align-items-center gap-2 fw-semibold" style="color:#1d4e89;" title="Energy">' +
-            '<span class="d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill"></i><span data-energy-value>' + energyLabel + "</span></span>" +
-            (profile.premium ? "" : '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>") +
-          "</span>" +
-          '<span class="badge rounded-pill" style="background:#eef3fa;color:#1d4e89;border:1px solid #d6e2f1;font-weight:600;">Lv ' + profile.level + " &middot; " + profile.totalXP + " XP</span>" +
+        premiumBadge +
+        '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Quiz-day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
+        '<span class="d-flex align-items-center gap-2 fw-semibold" style="color:#1d4e89;" title="Energy">' +
+        '<span class="d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill"></i><span data-energy-value>' + energyLabel + "</span></span>" +
+        (profile.premium ? "" : '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>") +
+        "</span>" +
+        '<span class="badge rounded-pill" style="background:#eef3fa;color:#1d4e89;border:1px solid #d6e2f1;font-weight:600;">Lv ' + profile.level + " &middot; " + profile.totalXP + " XP</span>" +
         "</div>";
     }
 
@@ -155,26 +155,26 @@
 
     var nav = el(
       '<nav id="appShellNav" class="navbar navbar-expand-md sticky-top px-3" style="background:#fff;border-bottom:1px solid #e2e7ef;z-index:1030;">' +
-        '<div class="container-fluid shell">' +
-          '<a class="navbar-brand brandfont fw-bold d-flex align-items-center gap-2 mb-0" style="color:#1d4e89;font-size:1.4rem;" href="' + base + (isStudent ? "student/dashboard.do" : "admin/dashboard.jsp") + '">' +
-            '<span class="brand-mark">&Sigma;</span>Mathify' +
-          "</a>" +
-          '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#appNav"><span class="navbar-toggler-icon"></span></button>' +
-          '<div class="collapse navbar-collapse" id="appNav">' +
-            '<ul class="nav nav-pills gap-1 mx-auto">' + navLinks + "</ul>" +
-            '<div class="d-flex align-items-center gap-3 ms-auto">' +
-              cluster +
-              '<div class="dropdown">' +
-                '<div class="rounded-circle d-flex align-items-center justify-content-center fw-semibold avatar" role="button" data-bs-toggle="dropdown">' + avatarHtml + "</div>" +
-                '<ul class="dropdown-menu dropdown-menu-end">' +
-                  '<li><h6 class="dropdown-header">' + (isStudent ? profile.name : "Administrator") + "</h6></li>" +
-                  '<li><hr class="dropdown-divider"></li>' +
-                  '<li><a class="dropdown-item text-danger" href="' + base + 'logout.do"><i class="bi bi-box-arrow-right me-2"></i>Log out</a></li>' +
-                "</ul>" +
-              "</div>" +
-            "</div>" +
-          "</div>" +
-        "</div>" +
+      '<div class="container-fluid shell">' +
+      '<a class="navbar-brand brandfont fw-bold d-flex align-items-center gap-2 mb-0" style="color:#1d4e89;font-size:1.4rem;" href="' + base + (isStudent ? "student/dashboard.do" : "admin/dashboard.do") + '">' +
+      '<span class="brand-mark">&Sigma;</span>Mathify' +
+      "</a>" +
+      '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#appNav"><span class="navbar-toggler-icon"></span></button>' +
+      '<div class="collapse navbar-collapse" id="appNav">' +
+      '<ul class="nav nav-pills gap-1 mx-auto">' + navLinks + "</ul>" +
+      '<div class="d-flex align-items-center gap-3 ms-auto">' +
+      cluster +
+      '<div class="dropdown">' +
+      '<div class="rounded-circle d-flex align-items-center justify-content-center fw-semibold avatar" role="button" data-bs-toggle="dropdown">' + avatarHtml + "</div>" +
+      '<ul class="dropdown-menu dropdown-menu-end">' +
+      '<li><h6 class="dropdown-header">' + (isStudent ? profile.name : "Administrator") + "</h6></li>" +
+      '<li><hr class="dropdown-divider"></li>' +
+      '<li><a class="dropdown-item text-danger" href="' + base + 'logout.do"><i class="bi bi-box-arrow-right me-2"></i>Log out</a></li>' +
+      "</ul>" +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>" +
       "</nav>"
     );
 
