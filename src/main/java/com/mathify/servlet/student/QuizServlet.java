@@ -37,12 +37,16 @@ public class QuizServlet extends HttpServlet {
                 }
                 String studentId = (String) session.getAttribute("userId");
                 if (studentId != null) {
+                    String courseId = courseDAO.getCourseIdForChapter(quiz.getChapterId());
+                    if (courseId != null) {
+                        progressDAO.enrollCourse(studentId, courseId);
+                    }
                     Student student = userDAO.getStudentById(studentId);
                     if (student != null && !student.isPremiumActive() && student.getEnergy() <= 0) {
                         clearQuizSession(session);
                         req.setAttribute("energyLocked", true);
                         req.setAttribute("lockedQuiz", quiz);
-                        req.setAttribute("courseId", courseDAO.getCourseIdForChapter(quiz.getChapterId()));
+                        req.setAttribute("courseId", courseId);
                         req.setAttribute("globalStudent", student);
                         req.setAttribute("globalProgress", progressDAO.getUserProgress(studentId));
                         req.getRequestDispatcher("/student/quiz.jsp").forward(req, resp);
@@ -197,7 +201,7 @@ public class QuizServlet extends HttpServlet {
                     return;
                 }
 
-                if (!student.isPremiumActive()) {
+                if (passed && !student.isPremiumActive()) {
                     userDAO.decreaseEnergy(studentId, 1);
                 }
 

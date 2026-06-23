@@ -30,6 +30,7 @@
     subscriptionPlan: document.body.dataset.subscriptionPlan || ""
   };
   var energyCountdownTimer = null;
+  var energyLockReloaded = false;
 
   var NAV = {
     student: [
@@ -96,6 +97,11 @@
     if (profile.energy < profile.energyMax && profile.energyRenewsAt && Date.now() >= profile.energyRenewsAt) {
       profile.energy = profile.energyMax;
       profile.energyRenewsAt = 0;
+      if (document.body.dataset.energyLocked === "true" && !energyLockReloaded) {
+        energyLockReloaded = true;
+        window.location.reload();
+        return;
+      }
     }
 
     energyValues.forEach(function (node) {

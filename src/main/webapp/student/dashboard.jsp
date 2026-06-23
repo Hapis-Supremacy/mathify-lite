@@ -90,10 +90,16 @@
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div><span class="badge rounded-pill mb-2 badge-soft"><%= ec.category() %></span>
           <h5 class="mb-0"><%= ec.title() %></h5></div>
+          <% if (ec.completed()) { %>
+          <span class="badge rounded-pill bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+          <% } else { %>
           <span class="text-secondary small"><%= ec.progressPercent() %>%</span>
+          <% } %>
         </div>
         <div class="progress mb-3" style="height:8px;"><% out.print("<div class=\"progress-bar\" style=\"width:" + ec.progressPercent() + "%;\"></div>"); %></div>
-        <a class="btn btn-primary btn-sm" href="course.do?id=<%= ec.courseId() %>"><i class="bi bi-play-fill me-1"></i>Continue</a>
+        <a class="btn <%= ec.completed() ? "btn-outline-success" : "btn-primary" %> btn-sm" href="course.do?id=<%= ec.courseId() %>">
+          <i class="bi <%= ec.completed() ? "bi-check-circle" : "bi-play-fill" %> me-1"></i><%= ec.completed() ? "Review course" : "Continue" %>
+        </a>
       </div></div>
     </div>
     <%     }
@@ -107,6 +113,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

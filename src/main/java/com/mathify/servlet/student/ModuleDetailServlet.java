@@ -1,6 +1,7 @@
 package com.mathify.servlet.student;
 
 import com.mathify.dao.CourseDAO;
+import com.mathify.dao.ProgressDAO;
 import com.mathify.model.LearningModule;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -15,6 +16,7 @@ import java.sql.SQLException;
 public class ModuleDetailServlet extends HttpServlet {
 
     private final CourseDAO courseDAO = new CourseDAO();
+    private final ProgressDAO progressDAO = new ProgressDAO();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -34,6 +36,10 @@ public class ModuleDetailServlet extends HttpServlet {
             req.setAttribute("module", module);
             String courseId = courseDAO.getCourseIdForModule(moduleId);
             req.setAttribute("courseId", courseId);
+            String studentId = (String) req.getSession().getAttribute("userId");
+            if (studentId != null && courseId != null) {
+                progressDAO.enrollCourse(studentId, courseId);
+            }
             req.getRequestDispatcher("/student/module.jsp").forward(req, resp);
         } catch (SQLException e) {
             getServletContext().log("Error fetching module details", e);

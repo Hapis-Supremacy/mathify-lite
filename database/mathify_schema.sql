@@ -42,7 +42,7 @@ CREATE TABLE users (
 DROP TABLE IF EXISTS students;
 CREATE TABLE students (
     student_id CHAR(36) NOT NULL,
-    energy     INT      NOT NULL DEFAULT 0,
+    energy     INT      NOT NULL DEFAULT 5,
     PRIMARY KEY (student_id),
     CONSTRAINT fk_students_user
         FOREIGN KEY (student_id) REFERENCES users (user_id)

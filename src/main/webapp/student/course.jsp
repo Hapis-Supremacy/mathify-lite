@@ -25,6 +25,8 @@
   String flashChapterId = (String) request.getAttribute("flashChapterId");
   Integer flashChapterXp = (Integer) request.getAttribute("flashChapterXp");
   Student globalStudent = (Student) request.getAttribute("globalStudent");
+  Boolean courseCompletedAttr = (Boolean) request.getAttribute("courseCompleted");
+  boolean courseCompleted = Boolean.TRUE.equals(courseCompletedAttr);
   boolean quizEnergyLocked = globalStudent != null && !globalStudent.isPremiumActive() && globalStudent.getEnergy() <= 0;
 %>
 <!DOCTYPE html>
@@ -43,6 +45,7 @@
       data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
       data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
       data-premium="${globalStudent.premiumActive}"
+      data-energy-locked="<%= quizEnergyLocked %>"
       data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
 
 <div class="container py-4 shell">
@@ -57,7 +60,13 @@
         <p class="text-secondary mb-0"><%= course.getDescription() != null ? course.getDescription() : "" %></p>
       </div>
       <div class="text-end">
-        <div class="mb-2"><span class="badge rounded-pill badge-success-soft"><i class="bi bi-check2 me-1"></i>Enrolled</span></div>
+        <div class="mb-2">
+          <% if (courseCompleted) { %>
+          <span class="badge rounded-pill bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+          <% } else { %>
+          <span class="badge rounded-pill badge-success-soft"><i class="bi bi-check2 me-1"></i>Enrolled</span>
+          <% } %>
+        </div>
         <button class="btn btn-outline-secondary btn-sm">Unenroll</button>
       </div>
     </div>
@@ -197,6 +206,6 @@
 <% } %>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

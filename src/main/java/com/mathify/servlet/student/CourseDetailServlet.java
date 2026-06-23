@@ -42,6 +42,9 @@ public class CourseDetailServlet extends HttpServlet {
             String studentId = (String) req.getSession().getAttribute("userId");
             if (studentId != null) {
                 com.mathify.dao.ProgressDAO progressDAO = new com.mathify.dao.ProgressDAO();
+                progressDAO.enrollCourse(studentId, courseId);
+                req.setAttribute("courseCompleted", progressDAO.hasCompletedCourse(studentId, courseId));
+
                 java.util.Set<String> completedChapters = progressDAO.getCompletedChapters(studentId, courseId);
                 req.setAttribute("completedChapters", completedChapters);
                 
