@@ -41,7 +41,7 @@
 
   <div class="mb-4">
     <h2 class="mb-1">Welcome back, <%= student.getName() %></h2>
-    <p class="text-secondary mb-0">Keep your streak alive — you're <%= xpToNextLevel %> XP from Level <%= progress.getLevel() + 1 %>.</p>
+    <p class="text-secondary mb-0">Keep your streak alive - you're <%= xpToNextLevel %> XP from Level <%= progress.getLevel() + 1 %>.</p>
   </div>
 
   <div class="row g-3 mb-4">

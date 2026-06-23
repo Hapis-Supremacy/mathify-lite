@@ -23,7 +23,7 @@ import java.sql.SQLException;
  * token to the browser as JSON. The amount is fixed server-side; the client
  * cannot influence what it is charged.
  *
- * <p>POST /student/premium/checkout.do — protected by {@code StudentAuthFilter}.
+ * <p>POST /student/premium/checkout.do - protected by {@code StudentAuthFilter}.
  */
 @WebServlet("/student/premium/checkout.do")
 public class PremiumCheckoutServlet extends HttpServlet {

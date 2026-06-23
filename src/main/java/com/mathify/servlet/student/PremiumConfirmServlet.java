@@ -19,10 +19,10 @@ import java.time.LocalDate;
 /**
  * Verifies the outcome of a Snap payment against Midtrans and, only if the
  * transaction has genuinely cleared, grants the student premium. The browser's
- * {@code onSuccess} callback is never trusted on its own — we re-check the
+ * {@code onSuccess} callback is never trusted on its own - we re-check the
  * status server-to-server using the order id we issued at checkout.
  *
- * <p>POST /student/premium/confirm.do?orderId=... — protected by the filter.
+ * <p>POST /student/premium/confirm.do?orderId=... - protected by the filter.
  */
 @WebServlet("/student/premium/confirm.do")
 public class PremiumConfirmServlet extends HttpServlet {

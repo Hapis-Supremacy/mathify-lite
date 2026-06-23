@@ -6,7 +6,7 @@ package com.mathify.model;
  */
 public class CourseCompletionDTO {
     private String courseName;
-    /** 0-100 — percentage of enrolled students who completed the course. */
+    /** 0-100 - percentage of enrolled students who completed the course. */
     private int completionPercent;
 
     public CourseCompletionDTO() {}

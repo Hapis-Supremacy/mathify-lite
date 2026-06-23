@@ -8,7 +8,7 @@ package com.mathify.model;
 public class CoursePopularityDTO {
     private String courseName;
     private int learnerCount;
-    /** 0-100 — relative to the most-popular course (which gets 100%). */
+    /** 0-100 - relative to the most-popular course (which gets 100%). */
     private int progressPercent;
 
     public CoursePopularityDTO() {}

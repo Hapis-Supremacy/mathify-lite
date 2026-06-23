@@ -148,7 +148,7 @@
       document.getElementById('bar3')
     ];
     var activeColors = ['#c0392b', '#d97706', '#d97706', '#1d8a5b'];
-    var labels = ['', 'Weak password', 'Fair — add numbers or symbols', 'Good password', 'Strong password'];
+    var labels = ['', 'Weak password', 'Fair - add numbers or symbols', 'Good password', 'Strong password'];
 
     function strength(pw) {
       var n = 0;

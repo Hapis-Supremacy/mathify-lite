@@ -165,7 +165,7 @@
     showAlert("info", "Verifying your payment...");
     confirmPayment(orderId).then(function (res) {
       if (res.status === "paid") {
-        showAlert("success", "Payment confirmed — you are now Premium! Redirecting...");
+        showAlert("success", "Payment confirmed - you are now Premium! Redirecting...");
         setTimeout(function () { window.location.href = res.redirect; }, 1200);
       } else if (res.status === "pending") {
         showAlert("warning", "Your payment is pending. Premium will activate once it clears.");

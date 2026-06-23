@@ -20,7 +20,7 @@ import java.util.Base64;
  * <p>Snap flow: {@link #createSnapTransaction} asks Midtrans for a one-time
  * payment token (server-to-server, authenticated with the Server Key). The
  * browser then opens the Snap popup with that token. After payment we call
- * {@link #getTransactionStatus} to verify the outcome before granting premium —
+ * {@link #getTransactionStatus} to verify the outcome before granting premium -
  * the client is never trusted to report its own success.
  */
 public class MidtransService {
