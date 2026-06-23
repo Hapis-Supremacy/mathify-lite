@@ -1,0 +1,23 @@
+name: Auto-merge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+jobs:
+  automerge:
+    name: Enable Auto-Merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable GitHub Auto-Merge
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: merge
+          # Removing the require-label input or setting it empty means it applies to all PRs
