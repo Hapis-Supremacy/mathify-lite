@@ -37,10 +37,41 @@ public class CourseDetailServlet extends HttpServlet {
             }
 
             req.setAttribute("course", course);
+            
+            // Fetch completed chapters for the Selesai pill
+            String studentId = (String) req.getSession().getAttribute("userId");
+            if (studentId != null) {
+                com.mathify.dao.ProgressDAO progressDAO = new com.mathify.dao.ProgressDAO();
+                java.util.Set<String> completedChapters = progressDAO.getCompletedChapters(studentId, courseId);
+                req.setAttribute("completedChapters", completedChapters);
+                
+                java.util.Set<String> completedModules = progressDAO.getCompletedModules(studentId, courseId);
+                req.setAttribute("completedModules", completedModules);
+
+                java.util.Set<String> completedQuizzes = progressDAO.getCompletedQuizzes(studentId, courseId);
+                req.setAttribute("completedQuizzes", completedQuizzes);
+
+                java.util.Map<String, Integer> quizScores = progressDAO.getQuizScoresForCourse(studentId, courseId);
+                req.setAttribute("quizScores", quizScores);
+            }
+
+            moveFlash(req, "flashQuizId");
+            moveFlash(req, "flashQuizXp");
+            moveFlash(req, "flashChapterId");
+            moveFlash(req, "flashChapterXp");
+
             req.getRequestDispatcher("/student/course.jsp").forward(req, resp);
         } catch (SQLException e) {
             getServletContext().log("Error fetching course details", e);
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error");
+        }
+    }
+
+    private void moveFlash(HttpServletRequest req, String name) {
+        Object value = req.getSession().getAttribute(name);
+        if (value != null) {
+            req.setAttribute(name, value);
+            req.getSession().removeAttribute(name);
         }
     }
 }

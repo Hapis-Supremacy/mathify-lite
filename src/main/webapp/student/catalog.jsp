@@ -13,7 +13,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <link href="../assets/css/app.css" rel="stylesheet">
 </head>
-<body data-role="student" data-page="catalog" data-base="../">
+<body data-role="student" data-page="catalog" data-base="../"
+      data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
+      data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
+      data-premium="${globalStudent.premiumActive}"
+      data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
 
 <div class="container py-4 shell">
 
@@ -53,6 +57,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=3" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=6" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

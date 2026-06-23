@@ -48,4 +48,8 @@ public final class FillBlankQuestion implements Question {
     public boolean isCaseSensitive() {
         return caseSensitive;
     }
+
+    public int getBlankCount() {
+        return correctAnswers.size();
+    }
 }

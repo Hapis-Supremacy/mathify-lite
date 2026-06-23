@@ -7,6 +7,7 @@ import java.util.List;
 public class Quiz {
 
     private String quizId;
+    private String chapterId;
     private String title;
     private List<Question> questions = new ArrayList<>();
     private int passingScore;
@@ -14,8 +15,9 @@ public class Quiz {
     public Quiz() {
     }
 
-    public Quiz(String quizId, String title, List<Question> questions, int passingScore) {
+    public Quiz(String quizId, String chapterId, String title, List<Question> questions, int passingScore) {
         this.quizId = quizId;
+        this.chapterId = chapterId;
         this.title = title;
         this.questions = questions;
         this.passingScore = passingScore;
@@ -40,6 +42,14 @@ public class Quiz {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getChapterId() {
+        return chapterId;
+    }
+
+    public void setChapterId(String chapterId) {
+        this.chapterId = chapterId;
     }
 
     public List<Question> getQuestions() {

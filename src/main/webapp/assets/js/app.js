@@ -17,15 +17,16 @@
       dynamicUserName = "User";
   }
 
-  // Sample profile — mirrors the prototype's initial state.
+  // Sample profile — mirrors the prototype's initial state or dynamic values.
   var profile = {
     name: dynamicUserName,
-    level: 4,
-    totalXP: 1240,
-    streak: 12,
-    energy: 4,
-    energyMax: 5,
-    premium: false
+    level: document.body.dataset.level ? parseInt(document.body.dataset.level, 10) : 0,
+    totalXP: document.body.dataset.xp ? parseInt(document.body.dataset.xp, 10) : 0,
+    streak: document.body.dataset.streak ? parseInt(document.body.dataset.streak, 10) : 0,
+    energy: document.body.dataset.energy ? parseInt(document.body.dataset.energy, 10) : 0,
+    energyMax: document.body.dataset.energyMax ? parseInt(document.body.dataset.energyMax, 10) : 5,
+    energyRenewsAt: document.body.dataset.energyRenewsAt ? parseInt(document.body.dataset.energyRenewsAt, 10) : 0,
+    premium: document.body.dataset.premium === "true"
   };
 
   var NAV = {
@@ -52,6 +53,56 @@
     return t.content.firstChild;
   }
 
+  function formatCountdown(ms) {
+    var totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
+  }
+
+  function energyRenewalText() {
+    if (profile.premium) {
+      return "Unlimited energy";
+    }
+    if (profile.energy >= profile.energyMax) {
+      return "Energy full";
+    }
+    if (!profile.energyRenewsAt) {
+      return "Energy renews after 00:00";
+    }
+    return "Energy renews after " + formatCountdown(profile.energyRenewsAt - Date.now());
+  }
+
+  function updateEnergyCountdown() {
+    var energyValues = document.querySelectorAll("[data-energy-value]");
+    var energyPills = document.querySelectorAll("[data-energy-renewal]");
+    if (!energyValues.length && !energyPills.length) {
+      return;
+    }
+
+    if (profile.premium) {
+      energyValues.forEach(function (node) {
+        node.textContent = "Unlimited";
+      });
+      energyPills.forEach(function (node) {
+        node.textContent = energyRenewalText();
+      });
+      return;
+    }
+
+    if (profile.energy < profile.energyMax && profile.energyRenewsAt && Date.now() >= profile.energyRenewsAt) {
+      profile.energy = profile.energyMax;
+      profile.energyRenewsAt = 0;
+    }
+
+    energyValues.forEach(function (node) {
+      node.textContent = profile.energy + "/" + profile.energyMax;
+    });
+    energyPills.forEach(function (node) {
+      node.textContent = energyRenewalText();
+    });
+  }
+
   function render() {
     var body = document.body;
     var role = body.dataset.role || "student";
@@ -76,8 +127,11 @@
       cluster =
         '<div class="d-none d-md-flex align-items-center gap-3">' +
           premiumBadge +
-          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
-          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#1d4e89;" title="Energy"><i class="bi bi-lightning-charge-fill"></i>' + energyLabel + "</span>" +
+          '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Quiz-day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
+          '<span class="d-flex align-items-center gap-2 fw-semibold" style="color:#1d4e89;" title="Energy">' +
+            '<span class="d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill"></i><span data-energy-value>' + energyLabel + "</span></span>" +
+            '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>" +
+          "</span>" +
           '<span class="badge rounded-pill" style="background:#eef3fa;color:#1d4e89;border:1px solid #d6e2f1;font-weight:600;">Lv ' + profile.level + " &middot; " + profile.totalXP + " XP</span>" +
         "</div>";
     }
@@ -110,6 +164,8 @@
     );
 
     body.insertBefore(nav, body.firstChild);
+    updateEnergyCountdown();
+    window.setInterval(updateEnergyCountdown, 1000);
   }
 
   if (document.readyState === "loading") {

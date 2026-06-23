@@ -1,4 +1,16 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="com.mathify.model.UserProgress" %>
+<%
+  UserProgress globalProgress = (UserProgress) request.getAttribute("globalProgress");
+  int currentStreak = globalProgress != null ? globalProgress.getCurrentStreak() : 0;
+  int unlockedCount = 3;
+  if (currentStreak >= 7) {
+      unlockedCount++;
+  }
+  if (currentStreak >= 30) {
+      unlockedCount++;
+  }
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,13 +23,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <link href="../assets/css/app.css" rel="stylesheet">
 </head>
-<body data-role="student" data-page="achievements" data-base="../">
+<body data-role="student" data-page="achievements" data-base="../"
+      data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
+      data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
+      data-premium="${globalStudent.premiumActive}"
+      data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
 
 <div class="container py-4 shell">
 
   <div class="mb-4">
     <h2 class="mb-1">Achievements</h2>
-    <p class="text-secondary mb-0">4 of 8 unlocked.</p>
+    <p class="text-secondary mb-0"><%= unlockedCount %> of 8 unlocked.</p>
   </div>
 
   <div class="row g-3" id="grid"></div>
@@ -25,16 +41,16 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=3" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=6" data-username="${sessionScope.userName}"></script>
 <script>
   var achievements = [
     { title:'First Steps',     req:'Complete your first lesson', icon:'bi-flag-fill',          unlocked:true },
     { title:'Quiz Whiz',       req:'Pass 5 quizzes',            icon:'bi-patch-check-fill',   unlocked:true },
-    { title:'On Fire',         req:'Reach a 7-day streak',      icon:'bi-fire',               unlocked:true },
+    { title:'On Fire',         req:'Reach a 7-day quiz streak', icon:'bi-fire',               unlocked:<%= currentStreak >= 7 %> },
     { title:'Scholar',         req:'Earn 1,000 XP',             icon:'bi-mortarboard-fill',   unlocked:true },
     { title:'Course Champion', req:'Finish a full course',      icon:'bi-trophy-fill',        unlocked:false },
     { title:'Perfectionist',   req:'Score 100% on a quiz',      icon:'bi-star-fill',          unlocked:false },
-    { title:'Marathoner',      req:'Reach a 30-day streak',     icon:'bi-calendar-check-fill',unlocked:false },
+    { title:'Marathoner',      req:'Reach a 30-day quiz streak',icon:'bi-calendar-check-fill',unlocked:<%= currentStreak >= 30 %> },
     { title:'Polymath',        req:'Enroll in 3 categories',    icon:'bi-stars',              unlocked:false }
   ];
   document.getElementById('grid').innerHTML = achievements.map(function (a) {
