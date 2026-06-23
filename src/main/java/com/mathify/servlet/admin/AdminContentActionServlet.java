@@ -48,6 +48,9 @@ public class AdminContentActionServlet extends HttpServlet {
             // Student progress / attempts reference this content (ON DELETE RESTRICT).
             resp.sendRedirect(editorUrl + "&error=in_use");
             return;
+        } catch (IllegalArgumentException iae) {
+            resp.sendRedirect(editorUrl + "&error=validation_error");
+            return;
         } catch (SQLException e) {
             getServletContext().log("Error executing content action: " + entity + "/" + action, e);
             resp.sendRedirect(editorUrl + "&error=server_error");
@@ -78,18 +81,29 @@ public class AdminContentActionServlet extends HttpServlet {
 
     private void handleModule(HttpServletRequest req, String action) throws SQLException {
         String type = req.getParameter("moduleType");
+        String contentUrl = trim(req.getParameter("contentUrl"));
         Integer duration = parseNullableInt(req.getParameter("durationSecs"));
         Integer slides = parseNullableInt(req.getParameter("slideCount"));
-        // Enforce the schema CHECK: VIDEO needs a duration, SLIDE needs a slide count.
-        if ("VIDEO".equals(type) && duration == null) duration = 0;
-        if ("SLIDE".equals(type) && slides == null) slides = 1;
+
+        if ("VIDEO".equals(type)) {
+            if (duration == null) duration = 0;
+            if (!contentUrl.contains("youtube.com") && !contentUrl.contains("youtu.be")) {
+                throw new IllegalArgumentException("Video modules must be YouTube links.");
+            }
+        }
+        if ("SLIDE".equals(type)) {
+            if (slides == null) slides = 1;
+            if (!contentUrl.contains("cloudinary.com")) {
+                throw new IllegalArgumentException("Slide modules must be Cloudinary links.");
+            }
+        }
 
         switch (action) {
             case "create" -> courseDAO.createModule(
                     req.getParameter("chapterId"),
                     trim(req.getParameter("title")),
                     type,
-                    trim(req.getParameter("contentUrl")),
+                    contentUrl,
                     duration,
                     slides,
                     parseInt(req.getParameter("orderIndex"), 0));
@@ -97,7 +111,7 @@ public class AdminContentActionServlet extends HttpServlet {
                     req.getParameter("moduleId"),
                     trim(req.getParameter("title")),
                     type,
-                    trim(req.getParameter("contentUrl")),
+                    contentUrl,
                     duration,
                     slides,
                     parseInt(req.getParameter("orderIndex"), 0));
