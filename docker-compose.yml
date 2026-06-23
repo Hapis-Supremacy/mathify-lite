@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  server:
+    image: maven:3.9-eclipse-temurin-17
+    container_name: mathify-lite-server
+    working_dir: /app
+    volumes:
+      - .:/app
+      - maven-repo:/root/.m2
+    ports:
+      - "8000:8080"
+    command: mvn package cargo:run
+    # Expose the host machine as host.docker.internal to the container
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - server
+
+volumes:
+  maven-repo:
