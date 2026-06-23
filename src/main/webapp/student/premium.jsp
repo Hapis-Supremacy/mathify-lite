@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +23,7 @@
   <div id="payAlert" class="alert d-none mx-auto" style="max-width:620px;" role="alert"></div>
 
   <div class="row g-3 justify-content-center">
-    <div class="col-12 col-md-5">
+    <div class="col-12 col-md-4">
       <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
         <h5>Free</h5>
         <div class="fs-2 fw-bold mb-3">Rp 0<span class="fs-6 text-secondary fw-normal">/mo</span></div>
@@ -35,23 +35,45 @@
         <button class="btn btn-outline-secondary w-100" disabled>Current plan</button>
       </div></div>
     </div>
-    <div class="col-12 col-md-5">
+
+    <div class="col-12 col-md-4">
       <div class="card border-0 shadow-sm h-100" style="outline:2px solid #1d4e89;"><div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Premium</h5>
+          <h5 class="mb-0">Premium Monthly</h5>
           <span class="badge" style="background:#1d4e89;">Popular</span>
         </div>
-        <div class="fs-2 fw-bold mb-3 mt-2">Rp 49.000<span class="fs-6 text-secondary fw-normal">/mo</span></div>
+        <div class="fs-2 fw-bold mb-3 mt-2">Rp 125.500<span class="fs-6 text-secondary fw-normal">/mo</span></div>
         <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
           <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Everything in Free</li>
           <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Unlimited energy</li>
           <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Detailed progress insights</li>
           <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Offline lessons</li>
         </ul>
-        <button id="upgradeBtn" class="btn btn-primary w-100"><i class="bi bi-gem me-1"></i>Upgrade to Premium</button>
+        <button class="btn btn-primary w-100 upgrade-btn" data-plan="monthly"><i class="bi bi-gem me-1"></i>Upgrade Monthly</button>
+      </div></div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm h-100" style="outline:2px solid #1d8a5b;"><div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Premium Yearly</h5>
+          <span class="badge" style="background:#1d8a5b;">Best value</span>
+        </div>
+        <div class="fs-2 fw-bold mb-3 mt-2">Rp 1.224.500<span class="fs-6 text-secondary fw-normal">/yr</span></div>
+        <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
+          <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Everything in Monthly</li>
+          <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Best value vs monthly</li>
+          <li><i class="bi bi-check2 me-2" style="color:#1d8a5b;"></i>Priority support</li>
+        </ul>
+        <button class="btn w-100 text-white upgrade-btn" style="background:#1d8a5b;" data-plan="yearly"><i class="bi bi-gem me-1"></i>Upgrade Yearly</button>
       </div></div>
     </div>
   </div>
+
+  <p class="text-secondary small text-center mt-3 mb-0" style="max-width:640px;margin-inline:auto;">
+    Secure payment by Midtrans opens in this page. Sandbox test mode — no real
+    money is charged. Premium activates automatically once payment clears.
+  </p>
 
 </div>
 
@@ -61,8 +83,8 @@
 (function () {
   "use strict";
 
-  var btn = document.getElementById("upgradeBtn");
   var alertBox = document.getElementById("payAlert");
+  var buttons = document.querySelectorAll(".upgrade-btn");
   var snapLoading = null;
 
   function showAlert(kind, message) {
@@ -72,10 +94,16 @@
   }
 
   function setBusy(busy) {
-    btn.disabled = busy;
-    btn.innerHTML = busy
-      ? '<span class="spinner-border spinner-border-sm me-1"></span>Processing...'
-      : '<i class="bi bi-gem me-1"></i>Upgrade to Premium';
+    buttons.forEach(function (b) {
+      b.disabled = busy;
+      if (busy && b === document.activeElement) {
+        b.dataset.label = b.innerHTML;
+        b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
+      } else if (!busy && b.dataset.label) {
+        b.innerHTML = b.dataset.label;
+        delete b.dataset.label;
+      }
+    });
   }
 
   // Load Snap.js once, using the client key returned by checkout.
@@ -119,11 +147,11 @@
     });
   }
 
-  btn.addEventListener("click", function () {
+  function startCheckout(plan) {
     setBusy(true);
     showAlert("info", "Starting secure checkout...");
 
-    fetch("premium/checkout.do", {
+    fetch("premium/checkout.do?plan=" + encodeURIComponent(plan), {
       method: "POST",
       headers: { "Accept": "application/json" }
     }).then(function (r) {
@@ -152,6 +180,10 @@
       showAlert("danger", err.message || "Something went wrong.");
       setBusy(false);
     });
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { startCheckout(b.dataset.plan); });
   });
 })();
 </script>

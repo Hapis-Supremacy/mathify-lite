@@ -88,6 +88,21 @@ public class SubscriptionDAO {
         }
     }
 
+    /**
+     * Cancels a student's premium (admin override). Keeps the row for history but
+     * flags it canceled so {@link SubscriptionInfo#isActive()} returns false.
+     * No-op if the student has no subscription row.
+     */
+    public void revokePremium(String studentId) throws SQLException {
+        String sql = "UPDATE subscriptions SET is_canceled = TRUE, payment_status = 'canceled' "
+                   + "WHERE student_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.executeUpdate();
+        }
+    }
+
     private SubscriptionInfo getByStudentIdOn(Connection conn, String studentId) throws SQLException {
         String sql = "SELECT subscription_plan, subscription_expiry, is_canceled, "
                    + "midtrans_order_id, payment_status "

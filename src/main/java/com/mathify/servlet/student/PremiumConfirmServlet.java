@@ -27,7 +27,7 @@ import java.time.LocalDate;
 @WebServlet("/student/premium/confirm.do")
 public class PremiumConfirmServlet extends HttpServlet {
 
-    private static final int PREMIUM_DAYS = 30;
+    private static final int DEFAULT_PREMIUM_DAYS = 30;
 
     private final MidtransService midtrans = new MidtransService();
     private final SubscriptionDAO subscriptionDAO = new SubscriptionDAO();
@@ -60,11 +60,14 @@ public class PremiumConfirmServlet extends HttpServlet {
             MidtransService.TransactionStatus status = midtrans.getTransactionStatus(orderId);
 
             if (status.isPaid()) {
+                Object daysAttr = session.getAttribute("pendingPlanDays");
+                int days = (daysAttr instanceof Integer) ? (Integer) daysAttr : DEFAULT_PREMIUM_DAYS;
                 LocalDate expiry = subscriptionDAO.activatePremium(
-                        userId, plan == null ? "Premium" : plan, PREMIUM_DAYS,
+                        userId, plan == null ? "Premium" : plan, days,
                         orderId, status.transactionStatus());
                 session.removeAttribute("pendingOrderId");
                 session.removeAttribute("pendingPlan");
+                session.removeAttribute("pendingPlanDays");
 
                 JSONObject out = new JSONObject()
                         .put("status", "paid")

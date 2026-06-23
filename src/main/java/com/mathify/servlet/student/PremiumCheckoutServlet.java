@@ -28,11 +28,21 @@ import java.sql.SQLException;
 @WebServlet("/student/premium/checkout.do")
 public class PremiumCheckoutServlet extends HttpServlet {
 
-    private static final String PLAN_NAME = "Premium";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserDAO userDAO = new UserDAO();
     private final MidtransService midtrans = new MidtransService();
+
+    /** A selectable premium plan: display label, charge amount (IDR), duration. */
+    private record PremiumPlan(String label, long amountIdr, int days) {}
+
+    /** Resolves the requested plan; defaults to Monthly for anything unknown. */
+    private static PremiumPlan resolvePlan(String key) {
+        if ("yearly".equalsIgnoreCase(key)) {
+            return new PremiumPlan("Premium Yearly", 1_224_500L, 365);
+        }
+        return new PremiumPlan("Premium Monthly", 125_500L, 30);
+    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
@@ -61,18 +71,19 @@ public class PremiumCheckoutServlet extends HttpServlet {
                 return;
             }
 
-            long amount = MidtransConfig.getPremiumPriceIdr();
+            PremiumPlan plan = resolvePlan(req.getParameter("plan"));
             String orderId = "MF-PREM-" + System.currentTimeMillis() + "-"
                     + Integer.toHexString(RANDOM.nextInt(0x10000));
             String finishUrl = absoluteUrl(req, "/student/premium.jsp?payment=finish");
 
             MidtransService.SnapTransaction txn = midtrans.createSnapTransaction(
-                    orderId, amount, student.getName(), student.getEmail(),
-                    "Mathify Premium (30 days)", finishUrl);
+                    orderId, plan.amountIdr(), student.getName(), student.getEmail(),
+                    "Mathify " + plan.label(), finishUrl);
 
-            // Remember what we created so confirm.do can validate the callback.
+            // Remember what we created so confirm.do can validate + grant correctly.
             session.setAttribute("pendingOrderId", orderId);
-            session.setAttribute("pendingPlan", PLAN_NAME);
+            session.setAttribute("pendingPlan", plan.label());
+            session.setAttribute("pendingPlanDays", plan.days());
 
             JSONObject out = new JSONObject()
                     .put("token", txn.token())
