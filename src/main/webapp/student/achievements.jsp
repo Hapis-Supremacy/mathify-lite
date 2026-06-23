@@ -1,12 +1,22 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.mathify.model.UserProgress" %>
+<%@ page import="com.mathify.model.Student" %>
 <%@ page import="java.util.List" %>
 <%@ page import="com.mathify.model.Achievement" %>
 <%
   UserProgress globalProgress = (UserProgress) request.getAttribute("globalProgress");
+  Student globalStudent = (Student) request.getAttribute("globalStudent");
   List<Achievement> allAchievements = (List<Achievement>) request.getAttribute("allAchievements");
   int unlockedCount = globalProgress != null ? globalProgress.getAchievements().size() : 0;
   int totalAchievements = allAchievements != null ? allAchievements.size() : 0;
+
+  int energy = globalStudent != null ? globalStudent.getEnergy() : 0;
+  int energyMax = globalStudent != null ? globalStudent.getMaxEnergy() : 5;
+  long energyRenewsAt = globalStudent != null ? globalStudent.getEnergyRenewalEpochMillis() : 0;
+  boolean premiumActive = globalStudent != null && globalStudent.isPremiumActive();
+  int totalXP = globalProgress != null ? globalProgress.getTotalXP() : 0;
+  int level = globalProgress != null ? globalProgress.getLevel() : 0;
+  int streak = globalProgress != null ? globalProgress.getCurrentStreak() : 0;
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,10 +31,10 @@
 <link href="../assets/css/app.css" rel="stylesheet">
 </head>
 <body data-role="student" data-page="achievements" data-base="../"
-      data-energy="${globalStudent.energy}" data-xp="${globalProgress.totalXP}"
-      data-energy-max="${globalStudent.maxEnergy}" data-energy-renews-at="${globalStudent.energyRenewalEpochMillis}"
-      data-premium="${globalStudent.premiumActive}"
-      data-level="${globalProgress.level}" data-streak="${globalProgress.currentStreak}">
+      data-energy="<%= energy %>" data-xp="<%= totalXP %>"
+      data-energy-max="<%= energyMax %>" data-energy-renews-at="<%= energyRenewsAt %>"
+      data-premium="<%= premiumActive %>"
+      data-level="<%= level %>" data-streak="<%= streak %>">
 
 <div class="container py-4 shell">
 
@@ -62,7 +72,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../assets/js/app.js?v=8" data-username="${sessionScope.userName}"></script>
-</script>
+<script src="../assets/js/app.js?v=8" data-username="<%= session.getAttribute("userName") %>"></script>
 </body>
 </html>
