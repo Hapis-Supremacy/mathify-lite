@@ -42,6 +42,10 @@ public final class MultipleChoiceQuestion implements Question {
         return options;
     }
 
+    public Set<String> getCorrectOptionIds() {
+        return correctOptionIds;
+    }
+
     public int getCorrectOptionCount() {
         return correctOptionIds.size();
     }

@@ -39,7 +39,8 @@ public class AdminQuizActionServlet extends HttpServlet {
 
         try {
             switch (action) {
-                case "create_question" -> handleCreateQuestion(req);
+                case "create_question" -> handleSaveQuestion(req, false);
+                case "update_question" -> handleSaveQuestion(req, true);
                 case "delete_question" -> courseDAO.deleteQuestion(req.getParameter("questionId"));
             }
         } catch (SQLException e) {
@@ -51,8 +52,14 @@ public class AdminQuizActionServlet extends HttpServlet {
         resp.sendRedirect(redirectUrl);
     }
 
-    private void handleCreateQuestion(HttpServletRequest req) throws SQLException {
+    /**
+     * Persists a question from the editor form. When {@code isUpdate} is true the
+     * existing {@code questionId} is rewritten (content and type may change);
+     * otherwise a new question is created on {@code quizId}.
+     */
+    private void handleSaveQuestion(HttpServletRequest req, boolean isUpdate) throws SQLException {
         String quizId = req.getParameter("quizId");
+        String questionId = req.getParameter("questionId");
         String type = req.getParameter("qType");
         String prompt = req.getParameter("prompt");
         int points = parseInt(req.getParameter("points"), 10);
@@ -61,14 +68,16 @@ public class AdminQuizActionServlet extends HttpServlet {
         if ("MULTIPLE_CHOICE".equals(type)) {
             String[] optionTexts = req.getParameterValues("mcOptionText");
             String[] correctIndicesStr = req.getParameterValues("mcCorrectIndex");
-            
-            if (optionTexts == null || correctIndicesStr == null) return;
-            
+
+            if (optionTexts == null) return;
+
             Set<Integer> correctIndices = new HashSet<>();
-            for (String idx : correctIndicesStr) {
-                correctIndices.add(parseInt(idx, -1));
+            if (correctIndicesStr != null) {
+                for (String idx : correctIndicesStr) {
+                    correctIndices.add(parseInt(idx, -1));
+                }
             }
-            
+
             List<MultipleChoiceQuestion.Option> options = new ArrayList<>();
             Set<String> correctText = new HashSet<>();
             for (int i = 0; i < optionTexts.length; i++) {
@@ -80,8 +89,12 @@ public class AdminQuizActionServlet extends HttpServlet {
                     }
                 }
             }
-            courseDAO.createMultipleChoiceQuestion(quizId, prompt, points, orderIndex, options, correctText);
-            
+            if (isUpdate) {
+                courseDAO.updateMultipleChoiceQuestion(questionId, prompt, points, orderIndex, options, correctText);
+            } else {
+                courseDAO.createMultipleChoiceQuestion(quizId, prompt, points, orderIndex, options, correctText);
+            }
+
         } else if ("FILL_BLANK".equals(type)) {
             boolean caseSensitive = "on".equals(req.getParameter("caseSensitive"));
             String[] answersParam = req.getParameterValues("fbAnswer");
@@ -91,13 +104,17 @@ public class AdminQuizActionServlet extends HttpServlet {
                     if (!ans.trim().isEmpty()) answers.add(ans.trim());
                 }
             }
-            courseDAO.createFillBlankQuestion(quizId, prompt, points, orderIndex, caseSensitive, answers);
-            
+            if (isUpdate) {
+                courseDAO.updateFillBlankQuestion(questionId, prompt, points, orderIndex, caseSensitive, answers);
+            } else {
+                courseDAO.createFillBlankQuestion(quizId, prompt, points, orderIndex, caseSensitive, answers);
+            }
+
         } else if ("DRAG_AND_DROP".equals(type)) {
             String[] drags = req.getParameterValues("ddDrag");
             String[] drops = req.getParameterValues("ddDrop");
             Map<String, String> pairings = new HashMap<>();
-            
+
             if (drags != null && drops != null && drags.length == drops.length) {
                 for (int i = 0; i < drags.length; i++) {
                     String drag = drags[i].trim();
@@ -107,7 +124,11 @@ public class AdminQuizActionServlet extends HttpServlet {
                     }
                 }
             }
-            courseDAO.createDragDropQuestion(quizId, prompt, points, orderIndex, pairings);
+            if (isUpdate) {
+                courseDAO.updateDragDropQuestion(questionId, prompt, points, orderIndex, pairings);
+            } else {
+                courseDAO.createDragDropQuestion(quizId, prompt, points, orderIndex, pairings);
+            }
         }
     }
 
