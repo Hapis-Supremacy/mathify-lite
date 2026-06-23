@@ -56,6 +56,14 @@
           <form id="student-form-${student.studentId}" action="${pageContext.request.contextPath}/admin/student-action.do" method="post" class="d-inline-flex gap-1 mb-0">
             <input type="hidden" name="studentId" value="${student.studentId}"/>
             <c:choose>
+              <c:when test="${student.plan == 'Premium'}">
+                <button type="submit" name="action" value="revoke_premium" class="btn btn-sm btn-outline-warning">Revoke Premium</button>
+              </c:when>
+              <c:otherwise>
+                <button type="submit" name="action" value="grant_premium" class="btn btn-sm btn-outline-primary"><i class="bi bi-gem me-1"></i>Make Premium</button>
+              </c:otherwise>
+            </c:choose>
+            <c:choose>
               <c:when test="${student.status == 'Active'}">
                 <button type="button" class="btn btn-sm btn-outline-secondary js-confirm-action"
                         data-form-id="student-form-${student.studentId}" data-variant="disable"
@@ -167,6 +175,6 @@
     });
   })();
 </script>
-<script src="../assets/js/app.js?v=3" data-username="${sessionScope.userName}"></script>
+<script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
 </body>
 </html>

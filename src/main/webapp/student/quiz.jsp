@@ -68,7 +68,7 @@
           </div>
 
           <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-          <script src="../assets/js/app.js?v=6" data-username="${sessionScope.userName}"></script>
+          <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
           <script>
             document.addEventListener('DOMContentLoaded', function () {
               var energyModal = document.getElementById('energyLockModal');
@@ -173,7 +173,7 @@
             });
           </script>
           <% } %>
-          <script src="../assets/js/app.js?v=6" data-username="${sessionScope.userName}"></script>
+          <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
         </body>
 
         </html>
@@ -480,7 +480,7 @@
                       });
                     }
                   </script>
-                  <script src="../assets/js/app.js?v=6" data-username="${sessionScope.userName}"></script>
+                  <script src="../assets/js/app.js?v=7" data-username="${sessionScope.userName}"></script>
           </body>
 
           </html>

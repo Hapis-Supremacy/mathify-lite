@@ -26,8 +26,10 @@
     energy: document.body.dataset.energy ? parseInt(document.body.dataset.energy, 10) : 0,
     energyMax: document.body.dataset.energyMax ? parseInt(document.body.dataset.energyMax, 10) : 5,
     energyRenewsAt: document.body.dataset.energyRenewsAt ? parseInt(document.body.dataset.energyRenewsAt, 10) : 0,
-    premium: document.body.dataset.premium === "true"
+    premium: document.body.dataset.premium === "true",
+    subscriptionPlan: document.body.dataset.subscriptionPlan || ""
   };
+  var energyCountdownTimer = null;
 
   var NAV = {
     student: [
@@ -85,7 +87,8 @@
         node.textContent = "Unlimited";
       });
       energyPills.forEach(function (node) {
-        node.textContent = energyRenewalText();
+        node.textContent = "";
+        node.style.display = "none";
       });
       return;
     }
@@ -99,6 +102,7 @@
       node.textContent = profile.energy + "/" + profile.energyMax;
     });
     energyPills.forEach(function (node) {
+      node.style.display = "";
       node.textContent = energyRenewalText();
     });
   }
@@ -108,6 +112,11 @@
     var role = body.dataset.role || "student";
     var page = body.dataset.page || "";
     var base = body.dataset.base || "";          // path to webapp root
+
+    // Idempotent: drop any previously injected navbar so render() can re-run
+    // once live profile data arrives.
+    var existing = document.getElementById("appShellNav");
+    if (existing) { existing.remove(); }
     var isStudent = role === "student";
     var items = NAV[role] || NAV.student;
 
@@ -130,7 +139,7 @@
           '<span class="d-flex align-items-center gap-1 fw-semibold" style="color:#d97706;" title="Quiz-day streak"><i class="bi bi-fire"></i>' + profile.streak + "</span>" +
           '<span class="d-flex align-items-center gap-2 fw-semibold" style="color:#1d4e89;" title="Energy">' +
             '<span class="d-flex align-items-center gap-1"><i class="bi bi-lightning-charge-fill"></i><span data-energy-value>' + energyLabel + "</span></span>" +
-            '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>" +
+            (profile.premium ? "" : '<span class="badge rounded-pill text-bg-light border fw-semibold" data-energy-renewal>' + energyRenewalText() + "</span>") +
           "</span>" +
           '<span class="badge rounded-pill" style="background:#eef3fa;color:#1d4e89;border:1px solid #d6e2f1;font-weight:600;">Lv ' + profile.level + " &middot; " + profile.totalXP + " XP</span>" +
         "</div>";
@@ -139,7 +148,7 @@
     var avatarHtml = '<i class="bi bi-person-fill" style="font-size:1.2rem;"></i>';
 
     var nav = el(
-      '<nav class="navbar navbar-expand-md sticky-top px-3" style="background:#fff;border-bottom:1px solid #e2e7ef;z-index:1030;">' +
+      '<nav id="appShellNav" class="navbar navbar-expand-md sticky-top px-3" style="background:#fff;border-bottom:1px solid #e2e7ef;z-index:1030;">' +
         '<div class="container-fluid shell">' +
           '<a class="navbar-brand brandfont fw-bold d-flex align-items-center gap-2 mb-0" style="color:#1d4e89;font-size:1.4rem;" href="' + base + (isStudent ? "student/dashboard.do" : "admin/dashboard.jsp") + '">' +
             '<span class="brand-mark">&Sigma;</span>Mathify' +
@@ -165,13 +174,44 @@
 
     body.insertBefore(nav, body.firstChild);
     updateEnergyCountdown();
-    window.setInterval(updateEnergyCountdown, 1000);
+    if (!energyCountdownTimer) {
+      energyCountdownTimer = window.setInterval(updateEnergyCountdown, 1000);
+    }
+  }
+
+  // Pull the student's real header data (premium status, energy, streak, XP)
+  // and re-render the navbar with it. Falls back silently to sample values.
+  function hydrateProfile() {
+    var base = document.body.dataset.base || "";
+    fetch(base + "student/profile.do", { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || data.error) { return; }
+        profile.name = data.name || profile.name;
+        profile.premium = !!data.premium;
+        profile.subscriptionPlan = data.subscriptionPlan || "";
+        if (typeof data.energy === "number") { profile.energy = data.energy; }
+        if (typeof data.energyMax === "number") { profile.energyMax = data.energyMax; }
+        if (typeof data.energyRenewsAt === "number") { profile.energyRenewsAt = data.energyRenewsAt; }
+        if (typeof data.streak === "number") { profile.streak = data.streak; }
+        if (typeof data.level === "number") { profile.level = data.level; }
+        if (typeof data.totalXp === "number") { profile.totalXP = data.totalXp; }
+        render();
+      })
+      .catch(function () { /* keep the sample navbar on any failure */ });
+  }
+
+  function start() {
+    render();
+    if ((document.body.dataset.role || "student") === "student") {
+      hydrateProfile();
+    }
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
+    document.addEventListener("DOMContentLoaded", start);
   } else {
-    render();
+    start();
   }
 
   // expose for any page that wants the sample profile
